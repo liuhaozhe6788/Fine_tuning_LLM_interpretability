@@ -145,6 +145,7 @@ def main():
             max_seq_length=MAX_SEQ_LENGTH,
             dataset_num_proc=2,
             packing=False,  # Can make training 5x faster for short sequences.
+            processing_class=tokenizer,
             args=TrainingArguments(
                 output_dir=model_dir,
                 gradient_checkpointing=True,
@@ -174,7 +175,6 @@ def main():
         print("Trainer stats:", trainer_stats)
         trainer.save_model(model_dir)
         print(f"Model saved to {model_dir}")    
-
 
 
 if __name__ == "__main__":
