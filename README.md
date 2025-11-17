@@ -40,3 +40,9 @@ After code generation, remove rows where the executed answer (`actual_answer`) d
 python -m preprocessing.filter_valid_answers
 ```
 ---
+
+### Fine-tuning with nohup
+
+```bash
+nohup python main.py FinQA mistralai/Mistral-7B-Instruct-v0.3 -P> training.log 2>&1 &
+```

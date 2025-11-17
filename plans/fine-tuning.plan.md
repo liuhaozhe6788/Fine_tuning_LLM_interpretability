@@ -22,6 +22,7 @@
 ```
 <s>[INST] question text context text [/INST] generated Python code </s>
 ```
+Remember to add <EOS> after each example!
 
 - **Dataset Preparation:** Convert each dataset into a list of prompt-completion pairs.[^1]
 

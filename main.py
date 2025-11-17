@@ -20,7 +20,7 @@ from model_utils.utils import load_model_and_tokenizer, learning_rate_map_dict, 
 def get_args():
     parser = argparse.ArgumentParser(description="Arguments for training a model with Financial QA datasets.")
     parser.add_argument("DATASET_NAME", type=str, default="FinQA", help="Name of the dataset class")
-    parser.add_argument("MODEL_ID", type=str, default="unsloth/mistral-7b-instruct-v0.2-bnb-4bit", help="Name of the model to use from huggingface")
+    parser.add_argument("MODEL_ID", type=str, default="mistralai/Mistral-7B-Instruct-v0.3", help="Name of the model to use from huggingface")
     parser.add_argument("-S", "--SEED", type=int, default=3, help="Random seed")
     parser.add_argument(
     "-M",
@@ -132,7 +132,9 @@ def main():
         )
         # SFT Train
         response_template_ids = tokenizer.encode(response_template, add_special_tokens=False)
-
+        model.gradient_checkpointing_enable()  # PEFT + checkpointing
+        model.enable_input_require_grads()     # ensure input grads
+        model.config.use_cache = False         # disable cache
         collator = DataCollatorForCompletionOnlyLM(response_template_ids, tokenizer=tokenizer)
         trainer = SFTTrainer(
             model=model,
@@ -175,6 +177,8 @@ def main():
         print("Trainer stats:", trainer_stats)
         trainer.save_model(model_dir)
         print(f"Model saved to {model_dir}")    
+
+
 
 
 if __name__ == "__main__":

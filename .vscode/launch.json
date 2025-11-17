@@ -5,13 +5,19 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Python: Current File",
+            "name": "run training script",
             "type": "python",
             "request": "launch",
             "program": "main.py",
             "console": "integratedTerminal",
-            "args": ["FinQA", "mistralai/Mistral-7B-Instruct-v0.3", "-F", "-P", "-O"],
-            "justMyCode": true
+            "args": ["FinQA", "mistralai/Mistral-7B-Instruct-v0.3", "-P"]
+        },
+        {
+            "name": "run inference script",
+            "type": "python",
+            "request": "launch",
+            "program": "inference.py",
+            "console": "integratedTerminal"
         }
     ]
 }
