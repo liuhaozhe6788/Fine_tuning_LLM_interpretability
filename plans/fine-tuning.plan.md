@@ -73,18 +73,6 @@ trainer = SFTTrainer(
 trainer.train()
 ```
 
-- **Hyperparameter Tuning:** Optimize hyperparameters (learning rate, LoRA rank, batch size, etc.) as described in the paper.[^1]
-
-
-#### 5. **Evaluation**
-
-- **Metrics:** Use accuracy, concept understanding, entity extraction, and executable code as evaluation metrics.
-
-
-#### 6. **Analysis**
-
-- **Model Capabilities:** Use GPT-4 to assess concept understanding and entity extraction by comparing the student model's code with the teacher's code.
-- **Manual Inspection:** Manually inspect a subset of samples to validate improvements in code structure and reasoning.[^1]
-
-***
+#### 5. **Hyperparameter Tuning:**
+ Optimize hyperparameters (num_of_epoch, ) using the dev set. 
 

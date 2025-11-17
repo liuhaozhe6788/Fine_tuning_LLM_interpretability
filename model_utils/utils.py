@@ -19,8 +19,6 @@ from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
 from config.generation_config import default_config
 
 learning_rate_map_dict = {
-    "unsloth/mistral-7b-v0.2-bnb-4bit": 2.5e-5,
-    "unsloth/mistral-7b-instruct-v0.2-bnb-4bit": 2.5e-5,
     "mistralai/Mistral-7B-Instruct-v0.3": 2.5e-5,
     "microsoft/Orca-2-7b": 5e-5,
     "microsoft/Orca-2-13b": 5e-5,
@@ -78,7 +76,7 @@ def load_model_and_tokenizer(
                 config=peft_config,
                 quantization_config=bnb_config,
                 device_map=device,
-                torch_dtype=dtype,
+                dtype=dtype,
                 attn_implementation=attn_implementation,
             )
             tokenizer = prepare_tokenizer(model)
@@ -88,7 +86,7 @@ def load_model_and_tokenizer(
                 model_id,
                 quantization_config=bnb_config,
                 device_map=device,
-                torch_dtype=dtype,
+                dtype=dtype,
                 attn_implementation=attn_implementation,
             )
             tokenizer = prepare_tokenizer(model, padding_side=padding_side)
@@ -100,7 +98,7 @@ def load_model_and_tokenizer(
             model_id,
             quantization_config=bnb_config,
             device_map=device,
-            torch_dtype=dtype,
+            dtype=dtype,
             attn_implementation=attn_implementation,
         )
         tokenizer = prepare_tokenizer(model, padding_side=padding_side)
@@ -196,7 +194,7 @@ def construct_paths(
         )
     else:
         model_id += "-no-train"
-    model_parent_dir = os.path.join(data_dir, "models", model_id)
+    model_parent_dir = os.path.join("data", "models", DATASET_NAME, model_id)
     model_dir = os.path.join(model_parent_dir, "model")   
 
     os.makedirs(model_parent_dir, exist_ok=True)

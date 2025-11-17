@@ -17,10 +17,11 @@ from preprocessing.dataset import BaseDataset
 from model_utils.utils import load_model_and_tokenizer, learning_rate_map_dict, format_prompts, construct_paths
 
 
-def parse_args():
+def get_args():
     parser = argparse.ArgumentParser(description="Arguments for training a model with Financial QA datasets.")
-    parser.add_argument("DATASET_NAME", type=str, help="Name of the dataset class")
-    parser.add_argument("-S", "--SEED", type=int, default=0, help="Random seed")
+    parser.add_argument("DATASET_NAME", type=str, default="FinQA", help="Name of the dataset class")
+    parser.add_argument("MODEL_ID", type=str, default="unsloth/mistral-7b-instruct-v0.2-bnb-4bit", help="Name of the model to use from huggingface")
+    parser.add_argument("-S", "--SEED", type=int, default=3, help="Random seed")
     parser.add_argument(
     "-M",
     "--MODEL_ID",
@@ -39,7 +40,7 @@ def parse_args():
     parser.add_argument("-EBS", "--EVAL_BATCH_SIZE", type=int, default=8, help="Batch size for evaluation (per device)")
     parser.add_argument("-F", "--LOAD_IN_4BIT", action="store_true", help="Whether to load in 4 bit")
     parser.add_argument("-GA", "--GRAD_ACCUM", type=int, default=1, help="Number of steps for gradient accumulation")
-    parser.add_argument("-MSL", "--MAX_SEQ_LENGTH", type=int, default=2048, help="Maximum sequence length for training")
+    parser.add_argument("-MSL", "--MAX_SEQ_LENGTH", type=int, default=4096, help="Maximum sequence length for training")
     parser.add_argument(
         "-NT",
         "--NO-TRAIN",
@@ -55,7 +56,7 @@ def parse_args():
     return parser.parse_args()
 
 def main():
-    args = parse_args()
+    args = get_args()
     DATASET_NAME = args.DATASET_NAME
     SEED = args.SEED
     MODEL_ID = args.MODEL_ID
@@ -88,9 +89,9 @@ def main():
     )
 
     dataset = BaseDataset(
-        train_path=data_dir / "finqa_train_generated_filtered.csv",
-        val_path=data_dir / "finqa_dev_generated_filtered.csv",
-        test_path=data_dir / "finqa_test_generated_filtered.csv",
+        train_path= os.path.join(data_dir, "finqa_train_generated_filtered.csv"),
+        val_path= os.path.join(data_dir, "finqa_dev_generated_filtered.csv"),
+        test_path= os.path.join(data_dir, "finqa_test_generated_filtered.csv"),
         seed=SEED
     )
 
@@ -141,7 +142,6 @@ def main():
                 prompt_template=prompt_template,
             ),
             train_dataset=dataset.train_data,
-            eval_dataset=dataset.val_data,
             max_seq_length=MAX_SEQ_LENGTH,
             dataset_num_proc=2,
             packing=False,  # Can make training 5x faster for short sequences.
@@ -174,3 +174,8 @@ def main():
         print("Trainer stats:", trainer_stats)
         trainer.save_model(model_dir)
         print(f"Model saved to {model_dir}")    
+
+
+
+if __name__ == "__main__":
+    main()

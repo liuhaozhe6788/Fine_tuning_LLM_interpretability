@@ -1,5 +1,6 @@
 data/*QA   
 data/clean
+data/models
 .DS_Store
 __pycache__/
 .env
