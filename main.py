@@ -11,11 +11,15 @@ from transformers import TrainingArguments
 from trl import SFTTrainer, DataCollatorForCompletionOnlyLM
 from peft import LoraConfig
 
+from huggingface_hub import login
+
 from config.prompt_templates import MODEL_ID_TO_TEMPLATES_DICT
 from preprocessing.dataset import BaseDataset
 
-from model_utils.utils import load_model_and_tokenizer, learning_rate_map_dict, format_prompts, construct_paths
+from model_utils.utils import load_model_and_tokenizer, learning_rate_map_dict, format_prompts, construct_paths_and_model_id
 
+
+login(token=os.getenv("HF_TOKEN"))
 
 def get_args():
     parser = argparse.ArgumentParser(description="Arguments for training a model with Financial QA datasets.")
@@ -37,6 +41,7 @@ def get_args():
         help="Which modules to train with LoRA",
     )
     parser.add_argument("-BS", "--BATCH_SIZE", type=int, default=1, help="Batch size for training (per device)")
+    parser.add_argument("-NE", "--NUM_EPOCHS", type=int, default=1, help="Number of epochs to train for")
     parser.add_argument("-EBS", "--EVAL_BATCH_SIZE", type=int, default=8, help="Batch size for evaluation (per device)")
     parser.add_argument("-F", "--LOAD_IN_4BIT", action="store_true", help="Whether to load in 4 bit")
     parser.add_argument("-GA", "--GRAD_ACCUM", type=int, default=1, help="Number of steps for gradient accumulation")
@@ -52,6 +57,11 @@ def get_args():
         "--OVERWRITE",
         action="store_true",
         help="Whether to overwrite existing results and retrain model",
+    )
+    parser.add_argument(
+        "--HF_NAME",
+        type=str,
+        help="Name of the user on Hugging Face Hub",
     )
     return parser.parse_args()
 
@@ -69,13 +79,14 @@ def main():
     MAX_SEQ_LENGTH = args.MAX_SEQ_LENGTH
     OVERWRITE = args.OVERWRITE
     NO_TRAIN = args.NO_TRAIN
+    NUM_EPOCHS = args.NUM_EPOCHS
     torch.manual_seed(SEED)
     np.random.seed(SEED)
     random.seed(SEED)
 
     train_mode = not NO_TRAIN
 
-    data_dir, model_dir = construct_paths(
+    data_dir, model_dir, model_id = construct_paths_and_model_id(
         DATASET_NAME=DATASET_NAME, 
         SEED=SEED, 
         MODEL_ID=MODEL_ID,
@@ -83,10 +94,12 @@ def main():
         LORA_MODULES=LORA_MODULES,
         LOAD_IN_4BIT=LOAD_IN_4BIT,
         BATCH_SIZE=BATCH_SIZE,
-        EVAL_BATCH_SIZE=EVAL_BATCH_SIZE,
+        NUM_EPOCHS=NUM_EPOCHS,
         GRAD_ACCUM=GRAD_ACCUM,
         NO_TRAIN=NO_TRAIN
     )
+
+    repo_id = f"{args.HF_NAME}/{model_id}" # repo_id is the full path to the model on Hugging Face Hub
 
     dataset = BaseDataset(
         train_path= os.path.join(data_dir, "finqa_train_generated_filtered.csv"),
@@ -106,20 +119,34 @@ def main():
     ) if PEFT else None)
 
     # Load the model
-    if not OVERWRITE and (
+    if not OVERWRITE:
+        if (
         os.path.isfile(os.path.join(model_dir, "config.json"))
         or os.path.isfile(os.path.join(model_dir, "adapter_config.json"))
-    ):
-        # Model has already been trained
-        print(f"Model already saved at {model_dir}, attempting to load.")
-        model, tokenizer = load_model_and_tokenizer(
-            model_id=model_dir,
-            load_in_4bit=LOAD_IN_4BIT,
-            peft_config=peft_config,
-            train_mode=train_mode,
-            attn_implementation="sdpa",
-        )
-        print(f"Loaded pretrained model from {model_dir}")
+        ):
+            # Model has already been trained
+            print(f"Model already saved at {model_dir}, attempting to load.")
+            model, tokenizer = load_model_and_tokenizer(
+                model_id=model_dir,
+                load_in_4bit=LOAD_IN_4BIT,
+                peft_config=peft_config,
+                train_mode=train_mode,
+                attn_implementation="sdpa",
+            )
+            print(f"Loaded fine-tuned model from {model_dir}")
+        else:
+            print(f"Model not found at {model_dir}, attempting to load from Hugging Face Hub.")
+            try: 
+                model, tokenizer = load_model_and_tokenizer(
+                model_id=repo_id,
+                load_in_4bit=LOAD_IN_4BIT,
+                peft_config=peft_config,
+                train_mode=train_mode,
+                attn_implementation="sdpa",
+                )
+                print(f"Loaded fine-tuned model from {repo_id}")
+            except Exception as e:
+                print(f"Error loading fine-tuned model from Hugging Face Hub: {e}")
     else:
         print(f"Loading model {MODEL_ID} from huggingface.")
         # Cannot load model with PeftConfig if in training mode
@@ -141,6 +168,7 @@ def main():
             data_collator=collator,
             formatting_func=lambda x: format_prompts(
                 x,
+                eos_token=tokenizer.eos_token,
                 prompt_template=prompt_template,
             ),
             train_dataset=dataset.train_data,
@@ -175,8 +203,9 @@ def main():
         print("Preparing to train model.")
         trainer_stats = trainer.train()
         print("Trainer stats:", trainer_stats)
-        trainer.save_model(model_dir)
-        print(f"Model saved to {model_dir}")    
+
+        trainer.push_to_hub(repo_id)
+        print(f"Model pushed to Hugging Face Hub")    
 
 
 

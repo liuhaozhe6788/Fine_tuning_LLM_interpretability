@@ -6,7 +6,7 @@
     "configurations": [
         {
             "name": "run training script",
-            "type": "python",
+            "type": "debugpy",
             "request": "launch",
             "program": "main.py",
             "console": "integratedTerminal",
@@ -14,9 +14,16 @@
         },
         {
             "name": "run inference script",
-            "type": "python",
+            "type": "debugpy",
             "request": "launch",
             "program": "inference.py",
+            "console": "integratedTerminal"
+        },
+        {
+            "name": "run filter valid answers script",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "preprocessing/filter_valid_answers.py",
             "console": "integratedTerminal"
         }
     ]

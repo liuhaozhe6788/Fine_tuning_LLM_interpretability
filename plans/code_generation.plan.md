@@ -22,7 +22,7 @@ Here is a specific plan for generating code from the teacher model:
     - Performs the calculation and stores the answer in a variable named `ans`.[^1]
 
 - Run the generated code using a Python interpreter.
-- Compare the output of the code with the ground truth answer.
+- Compare the output of the code with the ground truth answer. Beware of the different expressions in percentage, hundreds, thousands, and millions. 
 - If the code produces the correct answer, keep the sample.
 - If the code produces an incorrect answer, discard the sample or manually correct the code if possible.[^1]
 

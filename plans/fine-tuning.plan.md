@@ -73,7 +73,10 @@ trainer = SFTTrainer(
 
 trainer.train()
 ```
+#### 5. **Save the peft model to Hugging Face Hub**
+- After training the model with the SFTTrainer, save the model to Hugging Face Hub. 
+- To save the model, we need to configure the HF_API_KEY.
 
-#### 5. **Hyperparameter Tuning:**
+#### 6. **Hyperparameter Tuning:**
  Optimize hyperparameters (num_of_epoch, ) using the dev set. 
 

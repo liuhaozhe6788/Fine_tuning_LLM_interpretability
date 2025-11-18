@@ -134,6 +134,7 @@ def prepare_peft_model(
 
 def format_prompts(
     examples: Union[Dataset, dict],
+    eos_token: str,
     prompt_template: str,
 ) -> List[str]:
     """
@@ -141,6 +142,7 @@ def format_prompts(
 
     Args:
         examples - a dataset containing columns ["context", "query", "weight_context", "answer"],
+        eos_token - the end of sentence token
         prompt_template - the prompt template for which to fill out with examples
 
     Returns:
@@ -150,7 +152,8 @@ def format_prompts(
         construct_query(
             prompt_template=prompt_template,
             val_prompt=prompt,
-            val_code=generated_code
+            val_code=generated_code,
+            eos_token=eos_token
         )
         for (prompt, generated_code) in zip(
             examples["prompt"], examples["generated_code"]
@@ -161,23 +164,24 @@ def construct_query(
     prompt_template: str,
     val_prompt: str,
     val_code: str,
+    eos_token: str,
 ) -> str:
     instruction = val_prompt.split("###Passage")[0]
     user_prompt = val_prompt.removeprefix(instruction)
-    return prompt_template.format(instruction, user_prompt, val_code) + default_config.code_end_marker
+    return prompt_template.format(instruction, user_prompt, val_code) + default_config.code_end_marker + eos_token
 
-def construct_paths(
-    DATASET_NAME: str,
+def construct_paths_and_model_id(
+    DATASET_NAME: str,  
     SEED: int,
     MODEL_ID: str,
     PEFT: bool,
     LORA_MODULES: List[str],
     LOAD_IN_4BIT: bool,
     BATCH_SIZE: int,
-    EVAL_BATCH_SIZE: int,
+    NUM_EPOCHS: int,
     GRAD_ACCUM: int,
     NO_TRAIN: bool,
-) -> Tuple[Path, Path]:
+) -> Tuple[Path, Path, str]:
     data_dir = os.path.join(
         "data",
         "clean_with_code",
@@ -189,6 +193,7 @@ def construct_paths(
     if not NO_TRAIN:
         model_id += f"-peft{'_'.join(LORA_MODULES)}" if PEFT else ""
         model_id += f"-bs{BATCH_SIZE}"
+        model_id += f"-ne{NUM_EPOCHS}"
         model_id += (
             f"-ga{GRAD_ACCUM}" if GRAD_ACCUM != 1 else ""
         )
@@ -200,4 +205,4 @@ def construct_paths(
     os.makedirs(model_parent_dir, exist_ok=True)
     os.makedirs(model_dir, exist_ok=True)
 
-    return data_dir, model_dir
+    return data_dir, model_dir, model_id
