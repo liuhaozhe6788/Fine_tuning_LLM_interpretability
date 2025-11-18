@@ -25,6 +25,7 @@ def get_args():
     parser = argparse.ArgumentParser(description="Arguments for training a model with Financial QA datasets.")
     parser.add_argument("DATASET_NAME", type=str, default="FinQA", help="Name of the dataset class")
     parser.add_argument("MODEL_ID", type=str, default="mistralai/Mistral-7B-Instruct-v0.3", help="Name of the model to use from huggingface")
+    parser.add_argument("HF_NAME", type=str, help="Name of the user on Hugging Face Hub")
     parser.add_argument("-S", "--SEED", type=int, default=3, help="Random seed")
     parser.add_argument(
     "-M",
@@ -52,17 +53,6 @@ def get_args():
         action="store_true",
         help="Whether to train the model",
     )
-    parser.add_argument(
-        "-O",
-        "--OVERWRITE",
-        action="store_true",
-        help="Whether to overwrite existing results and retrain model",
-    )
-    parser.add_argument(
-        "--HF_NAME",
-        type=str,
-        help="Name of the user on Hugging Face Hub",
-    )
     return parser.parse_args()
 
 def main():
@@ -77,7 +67,6 @@ def main():
     EVAL_BATCH_SIZE = args.EVAL_BATCH_SIZE
     GRAD_ACCUM = args.GRAD_ACCUM
     MAX_SEQ_LENGTH = args.MAX_SEQ_LENGTH
-    OVERWRITE = args.OVERWRITE
     NO_TRAIN = args.NO_TRAIN
     NUM_EPOCHS = args.NUM_EPOCHS
     torch.manual_seed(SEED)
@@ -86,7 +75,7 @@ def main():
 
     train_mode = not NO_TRAIN
 
-    data_dir, model_dir, model_id = construct_paths_and_model_id(
+    data_dir, model_dir, ft_model_id = construct_paths_and_model_id(
         DATASET_NAME=DATASET_NAME, 
         SEED=SEED, 
         MODEL_ID=MODEL_ID,
@@ -99,7 +88,7 @@ def main():
         NO_TRAIN=NO_TRAIN
     )
 
-    repo_id = f"{args.HF_NAME}/{model_id}" # repo_id is the full path to the model on Hugging Face Hub
+    repo_id = f"{args.HF_NAME}/{ft_model_id}"
 
     dataset = BaseDataset(
         train_path= os.path.join(data_dir, "finqa_train_generated_filtered.csv"),
@@ -119,22 +108,22 @@ def main():
     ) if PEFT else None)
 
     # Load the model
-    if not OVERWRITE:
+    if NO_TRAIN:
         if (
         os.path.isfile(os.path.join(model_dir, "config.json"))
         or os.path.isfile(os.path.join(model_dir, "adapter_config.json"))
         ):
-            # Model has already been trained
-            print(f"Model already saved at {model_dir}, attempting to load.")
-            model, tokenizer = load_model_and_tokenizer(
-                model_id=model_dir,
-                load_in_4bit=LOAD_IN_4BIT,
-                peft_config=peft_config,
-                train_mode=train_mode,
-                attn_implementation="sdpa",
-            )
-            print(f"Loaded fine-tuned model from {model_dir}")
-        else:
+            # # Model has already been trained
+            # print(f"Model already saved at {model_dir}, attempting to load.")
+            # model, tokenizer = load_model_and_tokenizer(
+            #     model_id=model_dir,
+            #     load_in_4bit=LOAD_IN_4BIT,
+            #     peft_config=peft_config,
+            #     train_mode=train_mode,
+            #     attn_implementation="sdpa",
+            # )
+            # print(f"Loaded fine-tuned model from {model_dir}")
+        # else:
             print(f"Model not found at {model_dir}, attempting to load from Hugging Face Hub.")
             try: 
                 model, tokenizer = load_model_and_tokenizer(
@@ -148,7 +137,7 @@ def main():
             except Exception as e:
                 print(f"Error loading fine-tuned model from Hugging Face Hub: {e}")
     else:
-        print(f"Loading model {MODEL_ID} from huggingface.")
+        print(f"Loading pretrained model {MODEL_ID} from huggingface.")
         # Cannot load model with PeftConfig if in training mode
         model, tokenizer = load_model_and_tokenizer(
             model_id=MODEL_ID,
@@ -204,7 +193,7 @@ def main():
         trainer_stats = trainer.train()
         print("Trainer stats:", trainer_stats)
 
-        trainer.push_to_hub(repo_id)
+        trainer.push_to_hub(ft_model_id)
         print(f"Model pushed to Hugging Face Hub")    
 
 

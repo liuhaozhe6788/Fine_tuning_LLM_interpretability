@@ -190,19 +190,14 @@ def construct_paths_and_model_id(
 
     model_id = MODEL_ID.replace("/", "_")
     model_id += "-4bit" if LOAD_IN_4BIT else ""
-    if not NO_TRAIN:
-        model_id += f"-peft{'_'.join(LORA_MODULES)}" if PEFT else ""
-        model_id += f"-bs{BATCH_SIZE}"
-        model_id += f"-ne{NUM_EPOCHS}"
-        model_id += (
-            f"-ga{GRAD_ACCUM}" if GRAD_ACCUM != 1 else ""
-        )
-    else:
-        model_id += "-no-train"
-    model_parent_dir = os.path.join("data", "models", DATASET_NAME, model_id)
-    model_dir = os.path.join(model_parent_dir, "model")   
+    model_id += f"-peft{'_'.join(LORA_MODULES)}" if PEFT else ""
+    model_id += f"-bs{BATCH_SIZE}"
+    model_id += f"-ne{NUM_EPOCHS}"
+    model_id += (
+        f"-ga{GRAD_ACCUM}" if GRAD_ACCUM != 1 else ""
+    )
 
-    os.makedirs(model_parent_dir, exist_ok=True)
+    model_dir = os.path.join("data", "models", DATASET_NAME, model_id)
     os.makedirs(model_dir, exist_ok=True)
 
     return data_dir, model_dir, model_id
