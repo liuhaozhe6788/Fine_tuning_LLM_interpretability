@@ -181,7 +181,6 @@ def construct_ft_eval_query(
 
 def construct_paths_and_model_id(
     DATASET_NAME: str,  
-    SEED: int,
     MODEL_ID: str,
     PEFT: bool,
     LORA_MODULES: List[str],
@@ -190,7 +189,7 @@ def construct_paths_and_model_id(
     NUM_EPOCHS: int,
     GRAD_ACCUM: int,
     NO_TRAIN: bool,
-) -> Tuple[Path, Path, str]:
+) -> Tuple[Path, Path, Path, str]:
     data_dir = os.path.join(
         "data",
         "clean_with_code",
@@ -209,7 +208,10 @@ def construct_paths_and_model_id(
     model_dir = os.path.join("data", "models", DATASET_NAME, model_id)
     os.makedirs(model_dir, exist_ok=True)
 
-    return data_dir, model_dir, model_id
+    results_dir = os.path.join("results", DATASET_NAME, model_id)
+    os.makedirs(results_dir, exist_ok=True)
+
+    return data_dir, model_dir, results_dir, model_id
 
 def extract_code_from_response(result: str) -> str:
     code = result.split("[/INST]")[1].strip()

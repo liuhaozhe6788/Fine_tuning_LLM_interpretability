@@ -1,6 +1,6 @@
 data/*QA   
 data/clean
-data/clean_with_code/**/*generated.csv
+data/clean_with_code/FinQA/*generated.csv
 data/models
 .DS_Store
 __pycache__/

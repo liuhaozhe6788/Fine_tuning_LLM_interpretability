@@ -79,6 +79,7 @@ def get_args():
         help="Whether to evaluate on test set",
     )
     parser.add_argument("-EBS", "--EVAL_BATCH_SIZE", type=int, default=8, help="Batch size for evaluation (per device)")
+    parser.add_argument("-ET", "--EVAL_TYPE", type=str, choices=["fine-tuned", "zero-shot", "few-shot"], help="Type of evaluation to perform")
     return parser.parse_args()
 
 def main():
@@ -98,15 +99,15 @@ def main():
     TEST_SET = args.TEST_SET
     EVAL_BATCH_SIZE = args.EVAL_BATCH_SIZE
     NUM_EPOCHS = args.NUM_EPOCHS
+    EVAL_TYPE = args.EVAL_TYPE
     torch.manual_seed(SEED)
     np.random.seed(SEED)
     random.seed(SEED)
 
     train_mode = not NO_TRAIN
 
-    data_dir, model_dir, ft_model_id = construct_paths_and_model_id(
+    data_dir, model_dir, results_dir, ft_model_id = construct_paths_and_model_id(
         DATASET_NAME=DATASET_NAME, 
-        SEED=SEED, 
         MODEL_ID=MODEL_ID,
         PEFT=PEFT,
         LORA_MODULES=LORA_MODULES,
@@ -229,13 +230,23 @@ def main():
         tokenizer.padding_side = "left"
 
         if DEV_SET:
+            eval_results_dir = os.path.join(results_dir, "dev", EVAL_TYPE)
             eval_dataset = dataset.val_data
         if TEST_SET:
+            eval_results_dir = os.path.join(results_dir, "test", EVAL_TYPE)
             eval_dataset = dataset.test_data
+        os.makedirs(eval_results_dir, exist_ok=True)
 
         eval_results = evaluate_model(model=model, tokenizer=tokenizer, dataset=eval_dataset, batch_size=EVAL_BATCH_SIZE, is_response_correct_func=compare_answers, prompt_template=prompt_template)
 
         eval_metrics = compute_metrics(eval_results.to_pandas())
+
+        metrics_path = os.path.join(eval_results_dir, "metrics.json")
+        with open(metrics_path, "w", encoding="utf-8") as fp:
+            json.dump(eval_metrics, fp, ensure_ascii=False, indent=4, sort_keys=True)
+
+        print(f"Evaluation metrics saved to {metrics_path}")
+
 
 if __name__ == "__main__":
     main()
