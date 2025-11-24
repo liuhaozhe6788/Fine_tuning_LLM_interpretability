@@ -1,3 +1,4 @@
+import code
 import os
 import gc
 import sys
@@ -132,7 +133,7 @@ def prepare_peft_model(
     model.print_trainable_parameters()
     return model
 
-def format_prompts(
+def format_ft_prompts(
     examples: Union[Dataset, dict],
     eos_token: str,
     prompt_template: str,
@@ -149,7 +150,7 @@ def format_prompts(
         a list of prompts that combines the instruction, formatted input, and expected answer for each example.
     """
     return [
-        construct_query(
+        construct_ft_query(
             prompt_template=prompt_template,
             val_prompt=prompt,
             val_code=generated_code,
@@ -160,7 +161,7 @@ def format_prompts(
         )
     ]
 
-def construct_query(
+def construct_ft_query(
     prompt_template: str,
     val_prompt: str,
     val_code: str,
@@ -169,6 +170,14 @@ def construct_query(
     instruction = val_prompt.split("###Passage")[0]
     user_prompt = val_prompt.removeprefix(instruction)
     return prompt_template.format(instruction, user_prompt, val_code) + default_config.code_end_marker + eos_token
+
+def construct_ft_eval_query(
+    prompt_template: str,
+    val_prompt: str
+) -> str:
+    instruction = val_prompt.split("###Passage")[0]
+    user_prompt = val_prompt.removeprefix(instruction)
+    return prompt_template.format(instruction, user_prompt, "")
 
 def construct_paths_and_model_id(
     DATASET_NAME: str,  
@@ -201,3 +210,92 @@ def construct_paths_and_model_id(
     os.makedirs(model_dir, exist_ok=True)
 
     return data_dir, model_dir, model_id
+
+def extract_code_from_response(result: str) -> str:
+    code = result.split("[/INST]")[1].strip()
+    # Post-process: cut off everything after '###End Python' if it exists
+    end_marker = "###End Python"
+    if end_marker in code:
+        code = code.split(end_marker)[0] + "\n" + end_marker
+    return code
+
+def evaluate_model(
+    model,
+    tokenizer,
+    dataset: Dataset,
+    batch_size: int,
+    is_response_correct_func,
+    prompt_template: str
+):
+    """
+    Given a dataset with columns ["prompt", "expected_answer"], generate Python code and get the actual answer, then evaluate model accuracy against the expected answer.
+    1. Generate Python code from prompt
+    2. Execute the Python code and get the actual answer
+    3. Compare the actual answer with the expected answer using the is_response_correct_func
+    4. Return the accuracy
+    """
+    # Free gpu memory
+    gc.collect()
+    torch.cuda.empty_cache()
+
+    device = model.device
+    tokenizer.padding_side = "left"
+    encoded_dataset = dataset.map(
+        lambda examples: tokenizer([construct_ft_eval_query(prompt_template, prompt) for prompt in examples["prompt"]], padding=True, return_tensors="pt"),
+        batched=True,
+        batch_size=batch_size,
+    ).select_columns(["input_ids", "attention_mask", "expected_answer"])
+    print(encoded_dataset[0])
+    encoded_dataset.set_format(
+        type="torch", columns=["input_ids", "attention_mask", "expected_answer"], device=device
+    )  # required for loading correctly into dataloader
+    dataloader = torch.utils.data.DataLoader(encoded_dataset, batch_size=batch_size)
+    predictions, labels, is_correct_all = [], [], []
+    num_correct = 0
+    total = 0
+    model.eval()
+    with torch.no_grad():
+        for i, batch in enumerate(tqdm(dataloader)):
+            init_seq_len = batch["input_ids"].shape[1]
+            outputs = model.generate(
+                **batch,
+                do_sample=False,
+                temperature=0.0,
+                top_p=0.9,
+                max_new_tokens=1000,
+            )
+            responses_only = outputs[:, init_seq_len:]
+            decoded_responses = tokenizer.batch_decode(responses_only)
+            decoded_responses = [extract_code_from_response(response) for response in decoded_responses]
+            is_correct = [
+                is_response_correct_func(response, label) for response, label in zip(decoded_responses, batch["expected_answer"])
+            ]
+
+            num_correct += sum(is_correct)
+            total += len(batch["expected_answer"])
+            predictions += decoded_responses
+            is_correct_all += is_correct
+            labels += batch["expected_answer"]
+
+            print(f"Average accuracy at batch {i}: {num_correct/total} ({num_correct}/{total}).")
+
+    dataset = dataset.map(
+        lambda examples: {
+            "predictions": predictions,
+            "is_correct": is_correct_all,
+        },
+        batched=True,  # need to set this so that it sets the predictions column to be one element per row from the list
+        batch_size=len(
+            dataset
+        ),  # need to set this so that it doesn't have shape mismatch errors in the length of the column.
+    )
+
+    return dataset   
+
+def compute_metrics(df: pd.DataFrame) -> Dict[str, float]:
+    """
+    Compute metrics for the evaluation results.
+    """
+    return {
+        "accuracy": df["is_correct"].mean(),
+    }
