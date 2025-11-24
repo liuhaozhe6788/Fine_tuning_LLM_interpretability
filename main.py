@@ -79,7 +79,7 @@ def get_args():
         help="Whether to evaluate on test set",
     )
     parser.add_argument("-EBS", "--EVAL_BATCH_SIZE", type=int, default=8, help="Batch size for evaluation (per device)")
-    parser.add_argument("-ET", "--EVAL_TYPE", type=str, choices=["fine-tuned", "zero-shot", "few-shot"], help="Type of evaluation to perform")
+    parser.add_argument("-ET", "--EVAL_TYPE", type=str, default="fine-tuned", choices=["fine-tuned", "zero-shot", "few-shot"], help="Type of evaluation to perform")    
     return parser.parse_args()
 
 def main():

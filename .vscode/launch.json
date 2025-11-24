@@ -5,12 +5,32 @@
     "version": "0.2.0",
     "configurations": [
         {
+            "name": "Python: Current File",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "main.py",
+            "console": "integratedTerminal",
+            "justMyCode": true,
+            "args": [
+                "FinQA",
+                "mistralai/Mistral-7B-Instruct-v0.3",
+                "liuhaozhe6788",
+                "-P",
+                
+            ]
+        },
+        {
             "name": "run training script",
             "type": "debugpy",
             "request": "launch",
             "program": "main.py",
             "console": "integratedTerminal",
-            "args": ["FinQA", "mistralai/Mistral-7B-Instruct-v0.3", "liuhaozhe6788", "-P"]
+            "args": [
+                "FinQA",
+                "mistralai/Mistral-7B-Instruct-v0.3",
+                "liuhaozhe6788",
+                "-P"
+            ]
         },
         {
             "name": "run inference script",

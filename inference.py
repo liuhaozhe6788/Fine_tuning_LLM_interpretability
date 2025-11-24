@@ -1,5 +1,5 @@
 import torch, os
-from peft import PeftModel
+from peft import PeftModel, LoraConfig
 from transformers import (
     AutoModelForCausalLM,
     AutoTokenizer
@@ -13,7 +13,18 @@ attn_implementation = 'sdpa'
 adapter_name= "liuhaozhe6788/mistralai_Mistral-7B-Instruct-v0.3-peftq_proj_k_proj_v_proj_o_proj-bs1-ne1"
 model_name = "mistralai/Mistral-7B-Instruct-v0.3"
 
-ft_model, ft_tokenizer = load_model_and_tokenizer(model_id=adapter_name, train_mode=False, padding_side="left")
+peft_config = (
+    LoraConfig(
+        r=64,
+        lora_alpha=16,
+        target_modules=["q_proj", "k_proj", "v_proj", "o_proj"],
+        lora_dropout=0.00,
+        bias="none",
+        task_type="CAUSAL_LM",
+    )
+)
+
+ft_model, ft_tokenizer = load_model_and_tokenizer(model_id=adapter_name, peft_config=peft_config, train_mode=False, padding_side="left")
 # base_model, base_tokenizer = load_model_and_tokenizer(model_id=model_name, train_mode=False, padding_side="left")
 passage_query = """     ###Passage: the following table presents var with respect to our trading activities , as measured by our var methodology for the periods indicated : value-at-risk .
 
