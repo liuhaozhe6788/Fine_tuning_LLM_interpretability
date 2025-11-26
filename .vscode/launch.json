@@ -5,7 +5,7 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Python: Current File",
+            "name": "evaluate on dev set for fine-tuned model",
             "type": "debugpy",
             "request": "launch",
             "program": "main.py",
@@ -15,8 +15,46 @@
                 "FinQA",
                 "mistralai/Mistral-7B-Instruct-v0.3",
                 "liuhaozhe6788",
+                "-NT",
                 "-P",
-                
+                "-D",
+                "--VLLM"                
+            ]
+        },
+        {
+            "name": "evaluate on dev set for zero-shot model",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "main.py",
+            "console": "integratedTerminal",
+            "justMyCode": true,
+            "args": [
+                "FinQA",
+                "mistralai/Mistral-7B-Instruct-v0.3",
+                "liuhaozhe6788",
+                "-NT",
+                "-P",
+                "-D",
+                "--VLLM",
+                "--EVAL_TYPE", "zero-shot"                
+            ]
+        },
+        {
+            "name": "evaluate on dev set for few-shot model",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "main.py",
+            "console": "integratedTerminal",
+            "justMyCode": true,
+            "args": [
+                "FinQA",
+                "mistralai/Mistral-7B-Instruct-v0.3",
+                "liuhaozhe6788",
+                "-NT",
+                "-P",
+                "-D",
+                "--VLLM",
+                "--EVAL_TYPE", "few-shot"                
             ]
         },
         {

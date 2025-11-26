@@ -12,19 +12,22 @@ from trl import SFTTrainer, DataCollatorForCompletionOnlyLM
 from peft import LoraConfig
 
 from huggingface_hub import login
+from vllm import LLM
 
 from config.prompt_templates import MODEL_ID_TO_TEMPLATES_DICT
 from preprocessing.dataset import BaseDataset
 
 from model_utils.utils import (
     load_model_and_tokenizer, 
+    load_vllm_model,
     learning_rate_map_dict, 
     format_ft_prompts, 
     construct_paths_and_model_id, 
     evaluate_model,
+    evaluate_vllm_model,
     compute_metrics,
     )
-from preprocessing.filter_valid_answers import compare_answers
+from model_utils.utils import compare_answers
 
 
 login(token=os.getenv("HF_TOKEN"))
@@ -34,13 +37,7 @@ def get_args():
     parser.add_argument("DATASET_NAME", type=str, default="FinQA", help="Name of the dataset class")
     parser.add_argument("MODEL_ID", type=str, default="mistralai/Mistral-7B-Instruct-v0.3", help="Name of the model to use from huggingface")
     parser.add_argument("HF_NAME", type=str, help="Name of the user on Hugging Face Hub")
-    parser.add_argument("-S", "--SEED", type=int, default=3, help="Random seed")
-    parser.add_argument(
-    "-M",
-    "--MODEL_ID",
-    type=str,
-    help="Name of the model to use from huggingface",
-    )   
+    parser.add_argument("-S", "--SEED", type=int, default=3, help="Random seed") 
     parser.add_argument("-P", "--PEFT", action="store_true", help="Whether to train with PEFT")
     parser.add_argument(
         "-LM",
@@ -50,7 +47,7 @@ def get_args():
         help="Which modules to train with LoRA",
     )
     parser.add_argument("-BS", "--BATCH_SIZE", type=int, default=1, help="Batch size for training (per device)")
-    parser.add_argument("-NE", "--NUM_EPOCHS", type=int, default=1, help="Number of epochs to train for")
+    parser.add_argument("--NUM_EPOCHS", type=int, default=1, help="Number of epochs to train for")
     parser.add_argument("-F", "--LOAD_IN_4BIT", action="store_true", help="Whether to load in 4 bit")
     parser.add_argument("-GA", "--GRAD_ACCUM", type=int, default=1, help="Number of steps for gradient accumulation")
     parser.add_argument("-MSL", "--MAX_SEQ_LENGTH", type=int, default=4096, help="Maximum sequence length for training")
@@ -80,6 +77,7 @@ def get_args():
     )
     parser.add_argument("-EBS", "--EVAL_BATCH_SIZE", type=int, default=8, help="Batch size for evaluation (per device)")
     parser.add_argument("-ET", "--EVAL_TYPE", type=str, default="fine-tuned", choices=["fine-tuned", "zero-shot", "few-shot"], help="Type of evaluation to perform")    
+    parser.add_argument("--VLLM", action="store_true", help="Whether to use vllm for inference")
     return parser.parse_args()
 
 def main():
@@ -100,6 +98,7 @@ def main():
     EVAL_BATCH_SIZE = args.EVAL_BATCH_SIZE
     NUM_EPOCHS = args.NUM_EPOCHS
     EVAL_TYPE = args.EVAL_TYPE
+    VLLM = args.VLLM
     torch.manual_seed(SEED)
     np.random.seed(SEED)
     random.seed(SEED)
@@ -137,35 +136,54 @@ def main():
         task_type="CAUSAL_LM"
     ) if PEFT else None)
 
-    # Load the model
+    # Load the fine-tuned model
     if NO_TRAIN:
-        if (
-        os.path.isfile(os.path.join(model_dir, "config.json"))
-        or os.path.isfile(os.path.join(model_dir, "adapter_config.json"))
-        ):
-            # # Model has already been trained
-            # print(f"Model already saved at {model_dir}, attempting to load.")
-            model, tokenizer = load_model_and_tokenizer(
-                model_id=model_dir,
-                load_in_4bit=LOAD_IN_4BIT,
-                peft_config=peft_config,
-                train_mode=train_mode,
-                attn_implementation="sdpa",
-            )
-            print(f"Loaded fine-tuned model from {model_dir}")
+        if EVAL_TYPE == "fine-tuned":
+            if (
+            os.path.isfile(os.path.join(model_dir, "config.json"))
+            or os.path.isfile(os.path.join(model_dir, "adapter_config.json"))
+            ):
+                if VLLM:
+                    llm, lora_path = load_vllm_model(model_name=MODEL_ID, adapter_name=model_dir, enable_lora=True, max_lora_rank=512)
+                else:
+                    model, tokenizer = load_model_and_tokenizer(
+                        model_id=model_dir,
+                        load_in_4bit=LOAD_IN_4BIT,
+                        peft_config=peft_config,
+                        train_mode=train_mode,
+                        attn_implementation="sdpa"
+                    )
+                print(f"Loaded fine-tuned model from {model_dir}")
+            else:
+                print(f"Model not found at {model_dir}, attempting to load from Hugging Face Hub.")
+                try: 
+                    if VLLM:
+                        llm, lora_path = load_vllm_model(model_name=MODEL_ID, adapter_name=repo_id, enable_lora=True, max_lora_rank=512)
+                    else:
+                        model, tokenizer = load_model_and_tokenizer(
+                        model_id=repo_id,
+                        load_in_4bit=LOAD_IN_4BIT,
+                        peft_config=peft_config,
+                        train_mode=train_mode,
+                        attn_implementation="sdpa"
+                        )
+                        print(f"Loaded fine-tuned model from {repo_id}")
+                except Exception as e:
+                    print(f"Error loading fine-tuned model from Hugging Face Hub: {e}")
         else:
-            print(f"Model not found at {model_dir}, attempting to load from Hugging Face Hub.")
-            try: 
+            if VLLM:
+                print(f"Loading pretrained model {MODEL_ID} from vllm.")
+                llm, lora_path = load_vllm_model(model_name=MODEL_ID, enable_lora=False, max_lora_rank=512)
+            else:
+                print(f"Loading pretrained model {MODEL_ID} from huggingface.")
                 model, tokenizer = load_model_and_tokenizer(
-                model_id=repo_id,
-                load_in_4bit=LOAD_IN_4BIT,
-                peft_config=peft_config,
-                train_mode=train_mode,
-                attn_implementation="sdpa",
+                    model_id=MODEL_ID,
+                    load_in_4bit=LOAD_IN_4BIT,
+                    peft_config=peft_config,
+                    train_mode=train_mode,
+                    attn_implementation="sdpa"
                 )
-                print(f"Loaded fine-tuned model from {repo_id}")
-            except Exception as e:
-                print(f"Error loading fine-tuned model from Hugging Face Hub: {e}")
+            print(f"Loaded pretrained model from {MODEL_ID}")
     else:
         print(f"Loading pretrained model {MODEL_ID} from huggingface.")
         # Cannot load model with PeftConfig if in training mode
@@ -227,7 +245,8 @@ def main():
         print(f"Model pushed to Hugging Face Hub")    
 
     if not NO_EVAL:
-        tokenizer.padding_side = "left"
+        if not NO_TRAIN:
+            tokenizer.padding_side = "left"
 
         if DEV_SET:
             eval_results_dir = os.path.join(results_dir, "dev", EVAL_TYPE)
@@ -236,8 +255,11 @@ def main():
             eval_results_dir = os.path.join(results_dir, "test", EVAL_TYPE)
             eval_dataset = dataset.test_data
         os.makedirs(eval_results_dir, exist_ok=True)
-
-        eval_results = evaluate_model(model=model, tokenizer=tokenizer, dataset=eval_dataset, batch_size=EVAL_BATCH_SIZE, is_response_correct_func=compare_answers, prompt_template=prompt_template)
+        
+        if VLLM and NO_TRAIN:
+            eval_results = evaluate_vllm_model(llm=llm, lora_path=lora_path, dataset=eval_dataset, batch_size=EVAL_BATCH_SIZE, is_response_correct_func=compare_answers, prompt_template=prompt_template, eval_type=EVAL_TYPE)
+        else:
+            eval_results = evaluate_model(model=model, tokenizer=tokenizer, dataset=eval_dataset, batch_size=EVAL_BATCH_SIZE, is_response_correct_func=compare_answers, prompt_template=prompt_template)
 
         eval_metrics = compute_metrics(eval_results.to_pandas())
 

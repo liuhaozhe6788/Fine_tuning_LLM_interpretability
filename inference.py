@@ -1,31 +1,14 @@
-import torch, os
-from peft import PeftModel, LoraConfig
-from transformers import (
-    AutoModelForCausalLM,
-    AutoTokenizer
-)
-from model_utils.utils import load_model_and_tokenizer
-from transformers.generation.stopping_criteria import StoppingCriteria, StoppingCriteriaList
-#use bf16 and FlashAttention if supported
-compute_dtype = torch.float16
-attn_implementation = 'sdpa'
+from model_utils.utils import prepare_vllm_tokenizer
+
+from huggingface_hub import snapshot_download
+
+from vllm import LLM, SamplingParams
+from vllm.lora.request import LoRARequest
+
 
 adapter_name= "liuhaozhe6788/mistralai_Mistral-7B-Instruct-v0.3-peftq_proj_k_proj_v_proj_o_proj-bs1-ne1"
 model_name = "mistralai/Mistral-7B-Instruct-v0.3"
 
-peft_config = (
-    LoraConfig(
-        r=64,
-        lora_alpha=16,
-        target_modules=["q_proj", "k_proj", "v_proj", "o_proj"],
-        lora_dropout=0.00,
-        bias="none",
-        task_type="CAUSAL_LM",
-    )
-)
-
-ft_model, ft_tokenizer = load_model_and_tokenizer(model_id=adapter_name, peft_config=peft_config, train_mode=False, padding_side="left")
-# base_model, base_tokenizer = load_model_and_tokenizer(model_id=model_name, train_mode=False, padding_side="left")
 passage_query = """     ###Passage: the following table presents var with respect to our trading activities , as measured by our var methodology for the periods indicated : value-at-risk .
 
 years ended december 31 ( inmillions )|2008 annual average|2008 maximum|2008 minimum|2008 annual average|2008 maximum|minimum
@@ -65,18 +48,32 @@ ft_prompt = "<s>[INST] {}{} [/INST]".format("Read the following passage and then
     ###Python
 """)
 
-inputs = ft_tokenizer(ft_prompt, return_tensors="pt").to("cuda")
-outputs = ft_model.generate(
-    **inputs,
-    do_sample=False,
-    temperature=0.0,
-    top_p=0.9,
-    max_new_tokens=1000,
+llm = LLM(model=model_name, tokenizer=adapter_name, enable_lora=True, max_lora_rank=512)
+llm.set_tokenizer(prepare_vllm_tokenizer(llm.get_tokenizer(), padding_side="left"))
+lora_path = snapshot_download(repo_id=adapter_name)
+outputs = llm.generate(
+    [ft_prompt], 
+    sampling_params=SamplingParams(temperature=0.0, top_p=0.9, max_tokens=1000),
+    lora_request=LoRARequest(
+        "FinQA_adapter", 1, lora_path)
 )
-result = ft_tokenizer.decode(outputs[0])
+print("Fine-tuned model with vllm:")
+ans = outputs[0].outputs[0].text
+# Post-process: cut off everything after '###End Python' if it exists
+end_marker = "###End Python"
+if end_marker in ans:
+    ans = ans.split(end_marker)[0] + "\n" + end_marker
+print(ans)
+print("-"*100)
 
-print("Fine-tuned model:")
-ans = result.split("[/INST]")[1].strip()
+llm = LLM(model=model_name)
+llm.set_tokenizer(prepare_vllm_tokenizer(llm.get_tokenizer(), padding_side="left"))
+outputs = llm.generate(
+    [zero_shot_prompt], 
+    sampling_params=SamplingParams(temperature=0.0, top_p=0.9, max_tokens=1000),
+)
+print("Zero-shot model with vllm:")
+ans = outputs[0].outputs[0].text
 # Post-process: cut off everything after '###End Python' if it exists
 end_marker = "###End Python"
 if end_marker in ans:

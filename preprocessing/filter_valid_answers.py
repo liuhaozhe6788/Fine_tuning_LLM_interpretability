@@ -10,48 +10,10 @@ import os
 # Add parent directory to path
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-
-def compare_answers(actual: str, expected: str) -> bool:
-    """
-    Compare actual and expected answers, handling numeric and string comparisons.
-    
-    Args:
-        actual: Actual answer from code execution
-        expected: Expected answer from dataset
-        
-    Returns:
-        True if answers match, False otherwise
-    """
-    if pd.isna(actual) or actual is None:
-        return False
-    
-    if pd.isna(expected) or expected is None:
-        return False
-    
-    # Convert to strings and strip whitespace
-    actual_str = str(actual).strip()
-    expected_str = str(expected).strip()
-    
-    # Try numeric comparison first
-    try:
-        # Try numeric comparison
-        expected_num = float(expected_str)
-        result_num = float(actual_str)
-        is_valid = abs(expected_num - result_num) < 1e-3
-        return is_valid
-    except (ValueError, TypeError):
-        # Fall back to string comparison
-        is_valid = actual_str.lower() == expected_str.lower()
-        if is_valid:
-            return True
-        else:
-            if actual_str == "True" and expected_str == "yes":
-                return True
-            elif actual_str == "False" and expected_str == "no":
-                return True
-            else:
-                return False
-
+try:
+    from .utils import compare_answers
+except ImportError:
+    from utils import compare_answers
 
 def filter_valid_answers(
     input_csv: str,

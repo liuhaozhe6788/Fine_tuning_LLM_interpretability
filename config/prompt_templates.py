@@ -227,6 +227,16 @@ ans = net_change / pre_tax_losses_2018 * 100
     """
 ]
 
+zero_shot_eval_instruction = """First, identify entities required to answer the
+    question. Extract the identified entities and store in python variables. Then perform calculations with the entities and strictly
+    store the answer to the python variable "ans" in one value. Python code must
+    end after the variable "ans" is defined. Comments must begin
+    with character "#". Python code must be in one section enclosed in ```python\n your code here ```."""
+
+few_shot_eval_instruction = """Python code must
+    end after the variable "ans" is defined. Comments must begin
+    with character "#"."""
+
 def build_teacher_prompt(context: str, question: str, program: str) -> str:
     """
     Build the prompt template for code generation with the teacher model.
