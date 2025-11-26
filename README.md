@@ -64,3 +64,8 @@ nohup python main.py FinQA mistralai/Mistral-7B-Instruct-v0.3 liuhaozhe6788 -P -
 ```bash
 nohup python main.py FinQA mistralai/Mistral-7B-Instruct-v0.3 liuhaozhe6788 -P -NT -D --VLLM --EVAL_TYPE few-shot> eval_few_shot.log 2>&1 &
 ```
+
+### Mistral 7b instruct model and fine-tuned variant inference
+```bash
+python inference.py
+```
