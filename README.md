@@ -49,7 +49,7 @@ nohup python main.py FinQA mistralai/Mistral-7B-Instruct-v0.3 liuhaozhe6788 -P> 
 ```
 
 ### Fine-tuned model evaluation with nohup
-
+#### dev set
 - fine-tuned
 ```bash
 nohup python main.py FinQA mistralai/Mistral-7B-Instruct-v0.3 liuhaozhe6788 -P -NT -D --VLLM> eval_ft.log 2>&1 &
@@ -63,6 +63,22 @@ nohup python main.py FinQA mistralai/Mistral-7B-Instruct-v0.3 liuhaozhe6788 -P -
 - few-shot
 ```bash
 nohup python main.py FinQA mistralai/Mistral-7B-Instruct-v0.3 liuhaozhe6788 -P -NT -D --VLLM --EVAL_TYPE few-shot> eval_few_shot.log 2>&1 &
+```
+
+#### test set
+- fine-tuned
+```bash
+nohup python main.py FinQA mistralai/Mistral-7B-Instruct-v0.3 liuhaozhe6788 -P -NT -T --VLLM> eval_ft.log 2>&1 &
+```
+
+- zero-shot
+```bash
+nohup python main.py FinQA mistralai/Mistral-7B-Instruct-v0.3 liuhaozhe6788 -P -NT -T --VLLM --EVAL_TYPE zero-shot> eval_zero_shot.log 2>&1 &
+```
+
+- few-shot
+```bash
+nohup python main.py FinQA mistralai/Mistral-7B-Instruct-v0.3 liuhaozhe6788 -P -NT -T --VLLM --EVAL_TYPE few-shot> eval_few_shot.log 2>&1 &
 ```
 
 ### Mistral 7b instruct model and fine-tuned variant inference

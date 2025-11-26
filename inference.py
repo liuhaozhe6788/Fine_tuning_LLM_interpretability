@@ -1,9 +1,10 @@
 from model_utils.utils import prepare_vllm_tokenizer
-
+import torch, gc
 from huggingface_hub import snapshot_download
 
 from vllm import LLM, SamplingParams
 from vllm.lora.request import LoRARequest
+from vllm.distributed.parallel_state import destroy_model_parallel
 
 
 adapter_name= "liuhaozhe6788/mistralai_Mistral-7B-Instruct-v0.3-peftq_proj_k_proj_v_proj_o_proj-bs1-ne1"
@@ -66,6 +67,12 @@ if end_marker in ans:
 print(ans)
 print("-"*100)
 
+destroy_model_parallel()
+del llm # Isn't necessary for releasing memory, but why not
+gc.collect()
+torch.cuda.empty_cache()
+
+
 llm = LLM(model=model_name)
 llm.set_tokenizer(prepare_vllm_tokenizer(llm.get_tokenizer(), padding_side="left"))
 outputs = llm.generate(
@@ -74,9 +81,9 @@ outputs = llm.generate(
 )
 print("Zero-shot model with vllm:")
 ans = outputs[0].outputs[0].text
-# Post-process: cut off everything after '###End Python' if it exists
-end_marker = "###End Python"
-if end_marker in ans:
-    ans = ans.split(end_marker)[0] + "\n" + end_marker
+# # Post-process: cut off everything after '###End Python' if it exists
+# end_marker = "###End Python"
+# if end_marker in ans:
+#     ans = ans.split(end_marker)[0] + "\n" + end_marker
 print(ans)
 print("-"*100)
