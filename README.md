@@ -42,14 +42,14 @@ python -m preprocessing.filter_valid_answers
 ```
 ---
 
-### Fine-tuning with nohup
+## Fine-tuning with nohup
 
 ```bash
 nohup python main.py FinQA mistralai/Mistral-7B-Instruct-v0.3 liuhaozhe6788 -P> training.log 2>&1 &
 ```
 
-### Fine-tuned model evaluation with nohup
-#### dev set
+## Fine-tuned model evaluation with nohup
+### dev set
 - fine-tuned
 ```bash
 nohup python main.py FinQA mistralai/Mistral-7B-Instruct-v0.3 liuhaozhe6788 -P -NT -D --VLLM> eval_ft.log 2>&1 &
@@ -65,7 +65,7 @@ nohup python main.py FinQA mistralai/Mistral-7B-Instruct-v0.3 liuhaozhe6788 -P -
 nohup python main.py FinQA mistralai/Mistral-7B-Instruct-v0.3 liuhaozhe6788 -P -NT -D --VLLM --EVAL_TYPE few-shot> eval_few_shot.log 2>&1 &
 ```
 
-#### test set
+### test set
 - fine-tuned
 ```bash
 nohup python main.py FinQA mistralai/Mistral-7B-Instruct-v0.3 liuhaozhe6788 -P -NT -T --VLLM> eval_ft.log 2>&1 &
@@ -81,7 +81,11 @@ nohup python main.py FinQA mistralai/Mistral-7B-Instruct-v0.3 liuhaozhe6788 -P -
 nohup python main.py FinQA mistralai/Mistral-7B-Instruct-v0.3 liuhaozhe6788 -P -NT -T --VLLM --EVAL_TYPE few-shot> eval_few_shot.log 2>&1 &
 ```
 
-### Mistral 7b instruct model and fine-tuned variant inference
+## Mistral 7b instruct model and fine-tuned variant inference
 ```bash
 python inference.py
 ```
+
+## Crosscoder model diffing
+### Merge the peft model and push to Hugging Face Hub for nnsight
+
