@@ -23,20 +23,17 @@ from torch.distributions.categorical import Categorical
 from tqdm import tqdm
 import torch
 import numpy as np
-from jaxtyping import Float
+
+import wandb
 
 from functools import partial
 
 from IPython.display import HTML
 
-from transformer_lens.utils import to_numpy
 import pandas as pd
 
 from html import escape
 import colorsys
-
-
-import wandb
 
 import plotly.graph_objects as go
 
@@ -57,7 +54,7 @@ def imshow(tensor, renderer=None, xaxis="", yaxis="", **kwargs):
         facet_labels = None
     if "color_continuous_scale" not in kwargs_pre:
         kwargs_pre["color_continuous_scale"] = "RdBu"
-    fig = px.imshow(to_numpy(tensor), color_continuous_midpoint=0.0,labels={"x":xaxis, "y":yaxis}, **kwargs_pre).update_layout(**kwargs_post)
+    fig = px.imshow(tensor.detach().cpu().numpy(), color_continuous_midpoint=0.0,labels={"x":xaxis, "y":yaxis}, **kwargs_pre).update_layout(**kwargs_post)
     if facet_labels:
         for i, label in enumerate(facet_labels):
             fig.layout.annotations[i]['text'] = label
@@ -65,11 +62,11 @@ def imshow(tensor, renderer=None, xaxis="", yaxis="", **kwargs):
     fig.show(renderer)
 
 def line(tensor, renderer=None, xaxis="", yaxis="", **kwargs):
-    px.line(y=to_numpy(tensor), labels={"x":xaxis, "y":yaxis}, **kwargs).show(renderer)
+    px.line(y=tensor.detach().cpu().numpy(), labels={"x":xaxis, "y":yaxis}, **kwargs).show(renderer)
 
 def scatter(x, y, xaxis="", yaxis="", caxis="", renderer=None, return_fig=False, **kwargs):
-    x = to_numpy(x)
-    y = to_numpy(y)
+    x = x.detach().cpu().numpy()
+    y = y.detach().cpu().numpy()
     fig = px.scatter(y=y, x=x, labels={"x":xaxis, "y":yaxis, "color":caxis}, **kwargs)
     if return_fig:
         return fig
@@ -86,7 +83,7 @@ def lines(lines_list, x=None, mode='lines', labels=None, xaxis='', yaxis='', tit
     fig.update_yaxes(title=yaxis)
     for c, line in enumerate(lines_list):
         if type(line)==torch.Tensor:
-            line = to_numpy(line)
+            line = line.detach().cpu().numpy()
         if labels is not None:
             label = labels[c]
         else:
@@ -98,7 +95,7 @@ def lines(lines_list, x=None, mode='lines', labels=None, xaxis='', yaxis='', tit
 
 def bar(tensor, renderer=None, xaxis="", yaxis="", **kwargs):
     px.bar(
-        y=to_numpy(tensor),
+        y=tensor.detach().cpu().numpy(),
         labels={"x": xaxis, "y": yaxis},
         template="simple_white",
         **kwargs).show(renderer)

@@ -54,8 +54,8 @@ class CrossCoder(nn.Module):
             torch.zeros((2, d_in), dtype=self.dtype)
         )
         self.d_hidden = d_hidden
-
-        self.to(self.cfg["device_crosscoder"])
+        
+        self.to(self.cfg["device"])
         self.save_dir = None
         self.save_version = 0
 

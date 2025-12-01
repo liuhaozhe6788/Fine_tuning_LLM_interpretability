@@ -18,7 +18,7 @@ class Buffer:
             (self.buffer_size, 2, model_A.config.hidden_size),
             dtype=torch.bfloat16,
             requires_grad=False,
-        ).to(cfg["device_crosscoder"])  # hardcoding 2 for model diffing
+        ).to(cfg["device"])  # hardcoding 2 for model diffing
         self.cfg = cfg
         self.model_A = model_A
         self.model_B = model_B
@@ -37,7 +37,7 @@ class Buffer:
                 # estimated_norm_scaling_factor_A,
                 estimated_norm_scaling_factor_B,
             ],
-            device=cfg["device_crosscoder"],
+            device=cfg["device"],
             dtype=torch.float32,
         )
         self.refresh()
@@ -96,7 +96,7 @@ class Buffer:
 
         self.pointer = 0
         self.buffer = self.buffer[
-            torch.randperm(self.buffer.shape[0]).to(self.cfg["device_crosscoder"])
+            torch.randperm(self.buffer.shape[0]).to(self.cfg["device"])
         ]
 
     @torch.no_grad()
