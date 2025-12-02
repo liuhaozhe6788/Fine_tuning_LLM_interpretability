@@ -8,12 +8,15 @@ from huggingface_hub import login
 import os
 import einops
 import numpy as np
+import json
 # from train import cfg
 
 HF_TOKEN = os.environ.get("HF_TOKEN")
 login(HF_TOKEN)
 
-DATASET_ID_NAME = "liuhaozhe6788/acts-finqa-lora"
+DATASET_ID_BASE_MODEL_NAME = "liuhaozhe6788/acts-finqa-base"
+DATASET_ID_FT_MODEL_NAME = "liuhaozhe6788/acts-finqa-lora"
+NUM_SAMPLES = 1024
 
 @torch.no_grad()
 def collect_acts(model, prompts):
@@ -30,6 +33,7 @@ def collect_acts(model, prompts):
 
 def prepare_text_data():
     data = pd.read_csv("../data/clean_with_code/FinQA/finqa_train_generated_filtered.csv")
+    data = data.sample(n=NUM_SAMPLES, random_state=49)
     full_text_data = data.apply(lambda x: x["prompt"] + x["generated_code"], axis=1)
 
     # seq_lens = full_text_data.apply(lambda x: len(x))
@@ -41,32 +45,44 @@ def prepare_text_data():
     all_text_data = full_text_data.tolist()
     return all_text_data
 
+def estimate_norm_scaling_factor(acts: torch.Tensor, n_acts_for_norm_estimate: int = 1000000):
+    n_acts_for_norm_estimate = min(acts.shape[0], n_acts_for_norm_estimate)
+    mean_norm = acts[:n_acts_for_norm_estimate].norm(dim=-1).mean().item()
+    scaling_factor = torch.sqrt(torch.tensor(4096)) / mean_norm
+    return scaling_factor.item()
+
 def collect_base_model_acts_and_save_to_hf(all_text_data):
     base_model = LanguageModel('mistralai/Mistral-7B-Instruct-v0.3', device_map='cuda:0')
     base_model_acts = collect_acts(base_model, all_text_data)
+    scaling_factor = estimate_norm_scaling_factor(base_model_acts)
+    base_model_acts = base_model_acts * scaling_factor
     dataset = Dataset.from_dict({"base_model_acts": base_model_acts})
-    dataset.push_to_hub(DATASET_ID_NAME, private=False)
+    dataset.push_to_hub(DATASET_ID_BASE_MODEL_NAME, private=False)
     print("Saved base model acts to Hugging Face dataset")
+    return scaling_factor
 
 def collect_ft_model_acts_and_save_to_hf(all_text_data):
     ft_model = LanguageModel('liuhaozhe6788/mistralai_Mistral-7B-Instruct-v0.3-FinQA-lora', device_map='cuda:0')
     ft_model_acts = collect_acts(ft_model, all_text_data)
+    scaling_factor = estimate_norm_scaling_factor(ft_model_acts)
+    ft_model_acts = ft_model_acts * scaling_factor
     dataset = Dataset.from_dict({"ft_model_acts": ft_model_acts})
-    dataset.push_to_hub(DATASET_ID_NAME, private=False)
+    dataset.push_to_hub(DATASET_ID_FT_MODEL_NAME, private=False)
     print("Saved ft model acts to Hugging Face dataset")
-
-def estimate_norm_scaling_factor(acts: Dataset, n_acts_for_norm_estimate: int = 1000000):
-    n_acts_for_norm_estimate = min(len(acts), n_acts_for_norm_estimate)
-    norms_per_batch = []
-    mean_norm = acts[:n_acts_for_norm_estimate].norm(dim=-1).mean().item()
-    scaling_factor = np.sqrt(4096) / mean_norm
     return scaling_factor
 
 def main():
     all_text_data = prepare_text_data()
-    # collect_base_model_acts_and_save_to_hf(all_text_data)
-    collect_ft_model_acts_and_save_to_hf(all_text_data)
-    dataset = load_dataset(DATASET_ID_NAME, split="train")
+    base_model_scaling_factor = collect_base_model_acts_and_save_to_hf(all_text_data)
+    # ft_model_scaling_factor = collect_ft_model_acts_and_save_to_hf(all_text_data)
+    scaling_factors = {
+        "base_model_scaling_factor": 27.489933013916016,
+        "ft_model_scaling_factor": 27.12582778930664,
+    }
+    # to hugging face dataset
+    with open("scaling_factors.json", "w") as f:
+        json.dump(scaling_factors, f)
+
 
 if __name__ == "__main__":
     main()

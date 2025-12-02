@@ -1,6 +1,6 @@
 # Collect activation for the mistral instruct model and the fine tuned model
 ## Load dataset
-Sample 256 examples from the FinQA training set, the input data is the combined prompt and generated code.
+Sample 3000 examples from the FinQA training set, the input data is the combined prompt and generated code.
 ## Load model
 Load the model with nnsight.
 ## Compute activation

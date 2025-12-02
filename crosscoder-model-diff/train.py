@@ -1,14 +1,14 @@
 from utils import *
 from nnsight import LanguageModel
 from trainer import Trainer
-
+from datasets import load_dataset
 device = 'cuda:0'
 
 base_model = LanguageModel('mistralai/Mistral-7B-Instruct-v0.3', device_map=device)
 chat_model = LanguageModel('liuhaozhe6788/mistralai_Mistral-7B-Instruct-v0.3-FinQA-lora', device_map=device)
 
-
-input_prompts = ["The Eiffel Tower is in the city of Paris."] * 1024
+base_model_acts = load_dataset("liuhaozhe6788/acts-finqa-base", split="train")
+ft_model_acts = load_dataset("liuhaozhe6788/acts-finqa-lora", split="train")  
 
 
 default_cfg = {
@@ -32,5 +32,5 @@ default_cfg = {
 }
 cfg = arg_parse_update_cfg(default_cfg)
 
-trainer = Trainer(cfg, base_model, chat_model, input_prompts)
+trainer = Trainer(cfg, base_model, chat_model, base_model_acts, ft_model_acts)
 trainer.train()

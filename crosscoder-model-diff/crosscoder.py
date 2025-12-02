@@ -132,13 +132,17 @@ class CrossCoder(nn.Module):
         self.save_dir = base_dir / f"version_{version}"
         self.save_dir.mkdir(parents=True)
 
-    def save(self):
+    def save(self, optimizer, scheduler):
         if self.save_dir is None:
             self.create_save_dir()
         weight_path = self.save_dir / f"{self.save_version}.pt"
         cfg_path = self.save_dir / f"{self.save_version}_cfg.json"
 
-        torch.save(self.state_dict(), weight_path)
+        torch.save({
+            "model_state_dict": self.state_dict(), 
+            "optimizer_state_dict": optimizer.state_dict(), 
+            "scheduler_state_dict": scheduler.state_dict(),
+        }, weight_path)
         with open(cfg_path, "w") as f:
             json.dump(self.cfg, f)
 

@@ -12,4 +12,4 @@ vllm==0.11.2
 plotly
 nnsight
 wandb
-
+matplotlib

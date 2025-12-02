@@ -8,15 +8,14 @@ from datasets import Dataset
 
 
 class Trainer:
-    def __init__(self, cfg, model_A: LanguageModel, model_B: LanguageModel, input_prompts: Dataset):
+    def __init__(self, cfg, model_A: LanguageModel, model_B: LanguageModel, base_model_acts: Dataset, ft_model_acts: Dataset):
         self.cfg = cfg
         self.model_A = model_A
         self.model_B = model_B
         self.crosscoder = CrossCoder(cfg)
-        self.total_steps = len(input_prompts)
-        self.estimated_norm_scaling_factor_A = ...
-        self.estimated_norm_scaling_factor_B = ...
-        self.input_prompts = input_prompts
+        self.base_model_acts = base_model_acts
+        self.ft_model_acts = ft_model_acts
+        self.total_steps = len(base_model_acts)
         self.optimizer = torch.optim.Adam(
             self.crosscoder.parameters(),
             lr=cfg["lr"],
@@ -43,13 +42,15 @@ class Trainer:
             return self.cfg["l1_coeff"]
 
     def step(self):
-        acts_A = self.input_prompts["base_model_acts"][self.step_counter:self.step_counter + self.cfg["batch_size"]]
-        acts_B = self.input_prompts["ft_model_acts"][self.step_counter:self.step_counter + self.cfg["batch_size"]]
+        acts_A = self.base_model_acts[self.step_counter:self.step_counter + self.cfg["batch_size"]]
+        acts_B = self.ft_model_acts[self.step_counter:self.step_counter + self.cfg["batch_size"]]
+        acts_A = torch.tensor(acts_A["base_model_acts"])
+        acts_B = torch.tensor(acts_B["ft_model_acts"])
         acts_A = einops.rearrange(acts_A, "batch d_model -> batch 1 d_model")
         acts_B = einops.rearrange(acts_B, "batch d_model -> batch 1 d_model")
-        acts = torch.stack([acts_A, acts_B], dim=1)
+        acts = torch.cat([acts_A, acts_B], dim=1)
         acts = acts.to(self.cfg["device"])
-        acts = acts.to(self.cfg["enc_dtype"])
+        acts = acts.to(self.crosscoder.dtype)
         losses = self.crosscoder.get_losses(acts)
         loss = losses.l2_loss + self.get_l1_coeff() * losses.l1_loss
         loss.backward()
@@ -77,7 +78,12 @@ class Trainer:
         print(loss_dict)
 
     def save(self):
-        self.crosscoder.save()
+        self.crosscoder.save(self.optimizer, self.scheduler)
+        ##TODO: also save the optimizer state and the scheduler state
+        torch.save({
+            "optimizer_state_dict": self.optimizer.state_dict(),
+            "scheduler_state_dict": self.scheduler.state_dict(),
+        }, self.save_dir / "optimizer_and_scheduler.pt")
 
     def train(self):
         self.step_counter = 0

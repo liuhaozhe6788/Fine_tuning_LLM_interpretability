@@ -1,20 +1,27 @@
 from utils import *
 from crosscoder import CrossCoder
+from nnsight import LanguageModel
 torch.set_grad_enabled(False);
 
-cross_coder = CrossCoder.load_from_hf(device="cpu")
+device = 'cuda:0'
+base_estimated_scaling_factor = 0.2835
+chat_estimated_scaling_factor = 0.2533
 
+base_model = LanguageModel('mistralai/Mistral-7B-Instruct-v0.3', device_map=device)
+chat_model = LanguageModel('liuhaozhe6788/mistralai_Mistral-7B-Instruct-v0.3-FinQA-lora', device_map=device)
 
+cross_coder = CrossCoder.load_from_hf(device=device)
+
+model_name = "Mistral-7B-Instruct-v0.3"
 norms = cross_coder.W_dec.norm(dim=-1)
 norms.shape
 
 relative_norms = norms[:, 1] / norms.sum(dim=-1)
 relative_norms.shape
 
-
 fig = px.histogram(
     relative_norms.detach().cpu().numpy(), 
-    title="Gemma 2 2B Base vs IT Model Diff",
+    title=f"{model_name} Base vs FT Model Diff",
     labels={"value": "Relative decoder norm strength"},
     nbins=200,
 )
@@ -29,7 +36,7 @@ fig.update_xaxes(
 )
 
 fig.show()
-results_dir = Path("results/gemma-2-2b")
+results_dir = Path(f"results/{model_name}")
 results_dir.mkdir(parents=True, exist_ok=True)
 fig.write_image(results_dir / "relative_norms.png")
 
@@ -59,4 +66,3 @@ fig.update_yaxes(title_text="Number of Latents (log scale)")
 
 fig.show()
 fig.write_image(results_dir / "cosine_sims.png")
-
