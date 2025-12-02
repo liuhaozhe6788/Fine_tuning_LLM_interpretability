@@ -4,17 +4,19 @@ from buffer import Buffer
 import tqdm
 from nnsight import LanguageModel
 from torch.nn.utils import clip_grad_norm_
+from datasets import Dataset
 
 
 class Trainer:
-    def __init__(self, cfg, model_A: LanguageModel, model_B: LanguageModel, input_prompts):
+    def __init__(self, cfg, model_A: LanguageModel, model_B: LanguageModel, input_prompts: Dataset):
         self.cfg = cfg
         self.model_A = model_A
         self.model_B = model_B
         self.crosscoder = CrossCoder(cfg)
-        self.buffer = Buffer(cfg, model_A, model_B, input_prompts)
-        self.total_steps = cfg["num_tokens"] // cfg["batch_size"]
-
+        self.total_steps = len(input_prompts)
+        self.estimated_norm_scaling_factor_A = ...
+        self.estimated_norm_scaling_factor_B = ...
+        self.input_prompts = input_prompts
         self.optimizer = torch.optim.Adam(
             self.crosscoder.parameters(),
             lr=cfg["lr"],
@@ -41,7 +43,13 @@ class Trainer:
             return self.cfg["l1_coeff"]
 
     def step(self):
-        acts = self.buffer.next()
+        acts_A = self.input_prompts["base_model_acts"][self.step_counter:self.step_counter + self.cfg["batch_size"]]
+        acts_B = self.input_prompts["ft_model_acts"][self.step_counter:self.step_counter + self.cfg["batch_size"]]
+        acts_A = einops.rearrange(acts_A, "batch d_model -> batch 1 d_model")
+        acts_B = einops.rearrange(acts_B, "batch d_model -> batch 1 d_model")
+        acts = torch.stack([acts_A, acts_B], dim=1)
+        acts = acts.to(self.cfg["device"])
+        acts = acts.to(self.cfg["enc_dtype"])
         losses = self.crosscoder.get_losses(acts)
         loss = losses.l2_loss + self.get_l1_coeff() * losses.l1_loss
         loss.backward()

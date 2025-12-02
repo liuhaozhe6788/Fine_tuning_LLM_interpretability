@@ -1,17 +1,16 @@
-# %%
 from utils import *
 from crosscoder import CrossCoder
 torch.set_grad_enabled(False);
-# %%
+
 cross_coder = CrossCoder.load_from_hf(device="cpu")
 
-# %%
+
 norms = cross_coder.W_dec.norm(dim=-1)
 norms.shape
-# %%
+
 relative_norms = norms[:, 1] / norms.sum(dim=-1)
 relative_norms.shape
-# %%
+
 
 fig = px.histogram(
     relative_norms.detach().cpu().numpy(), 
@@ -34,15 +33,15 @@ results_dir = Path("results/gemma-2-2b")
 results_dir.mkdir(parents=True, exist_ok=True)
 fig.write_image(results_dir / "relative_norms.png")
 
-# %%
+
 shared_latent_mask = (relative_norms < 0.7) & (relative_norms > 0.3)
 shared_latent_mask.shape
-# %%
+
 # Cosine similarity of recoder vectors between models
 
 cosine_sims = (cross_coder.W_dec[:, 0, :] * cross_coder.W_dec[:, 1, :]).sum(dim=-1) / (cross_coder.W_dec[:, 0, :].norm(dim=-1) * cross_coder.W_dec[:, 1, :].norm(dim=-1))
 cosine_sims.shape
-# %%
+
 import plotly.express as px
 import torch
 
@@ -60,4 +59,4 @@ fig.update_yaxes(title_text="Number of Latents (log scale)")
 
 fig.show()
 fig.write_image(results_dir / "cosine_sims.png")
-# %%
+

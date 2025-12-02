@@ -1,9 +1,9 @@
 # Collect activation for the mistral instruct model and the fine tuned model
 ## Load dataset
-First use a toy dataset, then change to the FinQA training set, the input data is the combined prompt and generated code.
+Sample 256 examples from the FinQA training set, the input data is the combined prompt and generated code.
 ## Load model
 Load the model with nnsight.
 ## Compute activation
-Do forward pass and compute the activation of the layer 16 MLP output for each position in the generated code, and ignore the positions in the prompt.
+Do forward pass and compute the activation of the layer 16 MLP output for each position in the full sequence. Rearrange the activations in the shape of (num_of_total_acts, act_dim). Normalize the activations by the scaling factor for the respective model.
 ## Store the activation as dataset
 Store the activations as Hugging Face dataset
