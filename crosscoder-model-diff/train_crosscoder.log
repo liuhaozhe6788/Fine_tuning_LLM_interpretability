@@ -1,0 +1,32 @@
+nohup: ignoring input
+Updated config
+{
+  "seed": 49,
+  "batch_size": 4096,
+  "lr": 5e-05,
+  "l1_coeff": 2,
+  "beta1": 0.9,
+  "beta2": 0.999,
+  "d_in": 4096,
+  "dict_size": 16384,
+  "seq_len": 10000,
+  "enc_dtype": "fp32",
+  "model_name": "Mistral-7B-Instruct-v0.3",
+  "device": "cuda:0",
+  "log_every": 10,
+  "save_every": 100,
+  "dec_init_norm": 0.08,
+  "wandb_project": "crosscoder",
+  "wandb_entity": "liuhaozhe2000"
+}
+wandb: Currently logged in as: liuhaozhe2000 to https://api.wandb.ai. Use `wandb login --relogin` to force relogin
+wandb: setting up run 3cnu2fbx
+wandb: Tracking run with wandb version 0.23.1
+wandb: Run data is saved locally in /workspace/Fine_tuning_LLM_interpretability/crosscoder-model-diff/wandb/run-20251203_111417-3cnu2fbx
+wandb: Run `wandb offline` to turn off syncing.
+wandb: Syncing run breezy-energy-18
+wandb: ⭐️ View project at https://wandb.ai/liuhaozhe2000/crosscoder
+wandb: 🚀 View run at https://wandb.ai/liuhaozhe2000/crosscoder/runs/3cnu2fbx
+Training:   0%|          | 0/307 [00:00<?, ?it/s]{'loss': 8023.9677734375, 'l2_loss': 8023.9677734375, 'l1_loss': 117.88679504394531, 'l0_loss': 8190.14990234375, 'l1_coeff': 0.0, 'lr': 5e-05, 'explained_variance': -0.05182691290974617, 'explained_variance_A': -0.05276108533143997, 'explained_variance_B': -0.04940688982605934}
+Training:   0%|          | 1/307 [00:19<1:40:44, 19.75s/it]Training:   1%|          | 2/307 [00:38<1:38:20, 19.35s/it]Training:   1%|          | 3/307 [00:57<1:37:26, 19.23s/it]Training:   1%|▏         | 4/307 [01:16<1:36:16, 19.06s/it]Training:   2%|▏         | 5/307 [01:35<1:35:27, 18.97s/it]Training:   2%|▏         | 6/307 [01:54<1:34:31, 18.84s/it]Training:   2%|▏         | 7/307 [02:13<1:34:18, 18.86s/it]Training:   3%|▎         | 8/307 [02:31<1:33:44, 18.81s/it]Training:   3%|▎         | 9/307 [02:50<1:33:14, 18.77s/it]Training:   3%|▎         | 10/307 [03:09<1:32:48, 18.75s/it]{'loss': 7766.69384765625, 'l2_loss': 7435.1611328125, 'l1_loss': 165.766357421875, 'l0_loss': 7034.98828125, 'l1_coeff': 2, 'lr': 5e-05, 'explained_variance': 0.04118732735514641, 'explained_variance_A': 0.03968703746795654, 'explained_variance_B': 0.043582484126091}
+Training:   4%|▎         | 11/307 [03:28<1:32:53, 18.83s/it]Training:   4%|▍         | 12/307 [03:46<1:32:23, 18.79s/it]Training:   4%|▍         | 13/307 [04:05<1:31:56, 18.76s/it]Training:   5%|▍         | 14/307 [04:24<1:31:58, 18.84s/it]Training:   5%|▍         | 15/307 [04:43<1:32:12, 18.95s/it]Training:   5%|▌         | 16/307 [05:02<1:31:40, 18.90s/it]Training:   6%|▌         | 17/307 [05:21<1:31:29, 18.93s/it]
