@@ -33,4 +33,5 @@ default_cfg = {
 cfg = arg_parse_update_cfg(default_cfg)
 
 trainer = Trainer(cfg, base_model_acts, ft_model_acts)
+
 trainer.train()

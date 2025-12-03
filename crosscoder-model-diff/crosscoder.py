@@ -152,8 +152,7 @@ class CrossCoder(nn.Module):
     @classmethod
     def load_from_hf(
         cls,
-        repo_id: str = "ckkissane/crosscoder-gemma-2-2b-model-diff",
-        path: str = "blocks.14.hook_resid_pre",
+        repo_id: str = "liuhaozhe6788/crosscoder-model-diff-mistral-7b-instruct-v0.3_finQA_lora",
         device: Optional[Union[str, torch.device]] = None
     ) -> "CrossCoder":
         """
@@ -172,11 +171,11 @@ class CrossCoder(nn.Module):
         # Download config and weights
         config_path = hf_hub_download(
             repo_id=repo_id,
-            filename=f"{path}/cfg.json"
+            filename=f"cfg.json"
         )
         weights_path = hf_hub_download(
             repo_id=repo_id,
-            filename=f"{path}/cc_weights.pt"
+            filename=f"model.pt"
         )
 
         # Load config
@@ -192,7 +191,7 @@ class CrossCoder(nn.Module):
 
         # Load weights
         state_dict = torch.load(weights_path, map_location=cfg["device"])
-        instance.load_state_dict(state_dict)
+        instance.load_state_dict(state_dict["model_state_dict"])
 
         return instance
 

@@ -4,6 +4,11 @@ import tqdm
 from nnsight import LanguageModel
 from torch.nn.utils import clip_grad_norm_
 from datasets import Dataset
+from huggingface_hub import HfApi, login
+import os
+
+HF_TOKEN = os.environ.get("HF_TOKEN")
+login(token=os.getenv("HF_TOKEN"))
 
 
 class Trainer:
@@ -112,16 +117,39 @@ class Trainer:
 
     def train(self):
         self.step_counter = 0
-        try:
-            for i in tqdm.trange(self.total_steps, desc="Training"):
-                loss_dict = self.step()
-                if i % self.cfg["log_every"] == 0:
+
+        import math
+        model_version = math.ceil(self.total_steps / self.cfg["save_every"])
+        if not (os.path.isfile(f"checkpoints/version_0/{model_version}.pt") and os.path.isfile(f"checkpoints/version_0/{model_version}_cfg.json")):
+            try:
+                for i in tqdm.trange(self.total_steps, desc="Training"):
+                    loss_dict = self.step()
+                    if i % self.cfg["log_every"] == 0:
+                        self.log(loss_dict)
+                    if (i + 1) % self.cfg["save_every"] == 0:
+                        self.save()
+                if self.residual_batch_size > 0:
+                    loss_dict = self.step_residual()
                     self.log(loss_dict)
-                if (i + 1) % self.cfg["save_every"] == 0:
                     self.save()
-            if self.residual_batch_size > 0:
-                loss_dict = self.step_residual()
-                self.log(loss_dict)
+            finally:
                 self.save()
-        finally:
-            self.save()
+            save_dir = self.crosscoder.save_dir
+        else:
+            save_dir = "checkpoints/version_0"
+
+        api = HfApi()
+
+        repo_id = "liuhaozhe6788/crosscoder-model-diff-mistral-7b-instruct-v0.3_finQA_lora"
+        if not api.repo_exists(repo_id):
+            api.create_repo(repo_id)
+        api.upload_file(
+            path_or_fileobj=f"{save_dir}/{model_version}.pt",
+            repo_id=repo_id,
+            path_in_repo="model.pt"
+        )
+        api.upload_file(
+            path_or_fileobj=f"{save_dir}/{model_version}_cfg.json",
+            repo_id=repo_id,
+            path_in_repo="cfg.json"
+        )

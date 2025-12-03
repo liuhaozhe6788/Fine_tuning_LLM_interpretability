@@ -1,6 +1,15 @@
 vim ~/.bashrc
 source ~/.bashrc
 
+# Utility functions for colored output
+print_info() {
+    echo -e "\033[0;36m[INFO]\033[0m $1"
+}
+
+print_warning() {
+    echo -e "\033[0;33m[WARNING]\033[0m $1"
+}
+
 # Conda environment setup with Python 3.12
 CONDA_ENV_NAME="gpu-server-env"
 
