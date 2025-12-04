@@ -13,3 +13,4 @@ plotly
 nnsight
 wandb
 matplotlib
+seaborn
