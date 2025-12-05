@@ -1,0 +1,72 @@
+[
+  {
+    "index": 0,
+    "query": "What is machine learning? ",
+    "response": "Machine learning is a type of artificial intelligence that uses statistical techniques to enable machines to learn from data. It works by finding answers to questions by observing patterns in the data. Machine learning can be used to perform tasks that require a higher degree of accuracy, such as speech recognition, image recognition, and fraud detection, among others.\n\nMachine learning algorithms can learn and improve their capabilities over time, making them more efficient and accurate in their tasks. This helps to optimize processes, reduce errors, and streamline operations across various industries.\n\nThere are various machine learning techniques, including k-nearest neighbors, backpropagation,",
+    "kl_mc": 105.0,
+    "kl_exact": 96.625
+  },
+  {
+    "index": 1,
+    "query": "Explain the concept of neural networks. ",
+    "response": "Neural networks are a series of algorithms modeled after the structure of the human brain. They are used in machine learning and artificial intelligence for tasks such as image recognition, natural language processing, decision making, and more. In simple terms, neural networks involve creating interconnected nodes in a graph-like structure, with each node connected to several other nodes. These nodes process information as it passes through the network. In this process, each node receives inputs from surrounding nodes, processes them, and sends outputs to other nodes. The accuracy of the outputs depends on the complexity of the neural network, the quality of the input, and the algorithm used",
+    "kl_mc": 73.5,
+    "kl_exact": 80.6875
+  },
+  {
+    "index": 2,
+    "query": "How does gradient descent work? ",
+    "response": "# Strictly follow the provided hint\nStep0 = 1 / 2\nStep1 = Step0 - 1\nStep2 = 1 - Step0\nStep3 = Step1 / Step2\n\nans = Step3###End Python program###End Python program###End Python program###End Python program###End Python program###End Python program###End Python program###End Python program###End Python program###End Python program###End Python program###End Python program###End Python program###End Python program###End Python program###End Python program###End Python program###End Python program###End Python program###End",
+    "kl_mc": 275.5,
+    "kl_exact": 259.75
+  },
+  {
+    "index": 3,
+    "query": "What are transformers in deep learning? ",
+    "response": "Transformers in deep learning are a type of neural network used primarily for natural language processing (NLP). They allow for more efficient and effective translation of text from one language to another and for parsing a sentence and understanding its meaning in various contexts.\n\n# How transformers help with NLP\nDuring the training phase, the model learns to recognize patterns in the language and generate human-like responses. The output of the transformer is a probability distribution over the possible answers, and it's up to the model to choose the correct answer based on the context.\n\nFor example, a question like \"Who",
+    "kl_mc": 104.4375,
+    "kl_exact": 113.0625
+  },
+  {
+    "index": 4,
+    "query": "Describe reinforcement learning. ",
+    "response": "\n\n# Done\n# Calculate the weight loss from the table per the hint strictly\nw0 = 56 / 3\nw1 = w0 - 1\nw2 = w1 / 56\nans = w2###End Python Code###End Python Code###End Python Code###End Python Code###End Python Code###End Python Code###End Python Code###End Python Code ###End Python Code###End Python Code###End Python Code###End Python Code###End Python Code###End Python Code###End Python Code###End Python Code###End Python Code###End Python Code###End Python",
+    "kl_mc": 259.25,
+    "kl_exact": 246.625
+  },
+  {
+    "index": 5,
+    "query": "What is the difference between supervised and unsupervised learning? ",
+    "response": "supervised_learning_diff = \"supervised learning involves learning where a teacher or guidance provides the labels/targets for the model to learn, whereas unsupervised learning involves learning without any guidance or labels/targets\"\nans = supervised_learning_diff###End Script###End Python###End Perl###End Ruby###End Python###End Ruby###End End Python###End End Python###End End Python###End End Python###End End Python###End End Python###End End Python###End End Python###End End Python###End End Python###EndEnd Ruby###EndEnd Ruby###EndEnd Ruby###End",
+    "kl_mc": 223.75,
+    "kl_exact": 248.75
+  },
+  {
+    "index": 6,
+    "query": "How do convolutional neural networks work? ",
+    "response": "Conventional neural networks consist of multiple layers of interconnected artificial neurons, analogous to biological neurons of the brain. Neurons in a conventional neural network perform the following functions:\n\n1. Receive inputs from other neurons, or from the environment\n2. Perform internal computations\n3. Provide outputs to other neurons or to affect the environment\n\nConventional neural networks follow a specific architecture: feedforward connections from one layer to another, full connections within each layer, and fully-connected layers that receive inputs from the environment or from the outputs of other neural nets. This architecture",
+    "kl_mc": 94.875,
+    "kl_exact": 98.1875
+  },
+  {
+    "index": 7,
+    "query": "What is attention mechanism? ",
+    "response": "An attention mechanism, as the name suggests, directs a neural network to pay attention to certain inputs relative to others. This is particularly useful in complex tasks, where paying attention to the wrong input could have detrimental consequences. Attention mechanisms typically use methods such as focusing on specific regions of images or sound, or focusing on specific features of data, to direct the network. Attention mechanisms can also improve the performance of neural networks in tasks like object recognition, image generation, and speech recognition.\n\nAttention mechanisms can be implemented in various ways, but one common approach is to use a \"softmax\" function:\n#",
+    "kl_mc": 138.375,
+    "kl_exact": 132.0
+  },
+  {
+    "index": 8,
+    "query": "Explain backpropagation. ",
+    "response": "Backpropagation is a method used in artificial intelligence to calculate the gradient of the error function with respect to the weights. It is used in neural networks for training and for fine-tuning after training.\n\nStep 1: Forward calculation of output data for given output nodes\nStep 2: Calculate the gradient of the error function with respect to the weights\nStep 3: Update the weights using those gradients\n\nStep 1: Forward calculation is the process of calculating the output data for a neural network for a given set of input values.\nStep 2: Gradient calculation is the process",
+    "kl_mc": 109.8125,
+    "kl_exact": 122.9375
+  },
+  {
+    "index": 9,
+    "query": "What is transfer learning? ",
+    "response": "Transfer learning is a machine learning technique that involves reusing pre-trained models or knowledge across models for new tasks. It's used in situations where acquiring new data for training is too expensive, complicated, or time-consuming. Instead, pre-trained model weights are used to \"transfer\" the acquired knowledge to the intended task at hand.\n\nFor example, if a new AI model is required to perform image-based object detection and the dataset for object detection is too small, then transfer learning can be used by reusing a pre-trained object detection model for a new domain of objects and a smaller dataset. The",
+    "kl_mc": 113.375,
+    "kl_exact": 109.6875
+  }
+]

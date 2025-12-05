@@ -1,0 +1,89 @@
+======================================================================
+KL DIVERGENCE EXPERIMENT REPORT
+======================================================================
+
+CONFIGURATION:
+----------------------------------------
+  Base Model:     mistralai/Mistral-7B-Instruct-v0.3
+  Adapter:        liuhaozhe6788/mistralai_Mistral-7B-Instruct-v0.3-peftq_proj_k_proj_v_proj_o_proj-bs1-ne1
+  Policy Device:  cuda:0
+  Ref Device:     cuda:1
+  Max New Tokens: 128
+  Temperature:    1.0
+  Batch Size:     4
+  Num Prompts:    20
+
+RESULTS:
+----------------------------------------
+  MC Estimator KL:     149.7500 ± 70.1250
+  Exact (Stepwise) KL: 150.8750 ± 67.4375
+
+PER-SAMPLE KL VALUES:
+----------------------------------------
+
+--- Sample 1 ---
+Query: What is machine learning? 
+Response: Machine learning is a type of artificial intelligence that uses statistical techniques to enable machines to learn from data. It works by finding answers to questions by observing patterns in the data...
+KL (MC): 105.0000, KL (Exact): 96.6250
+
+--- Sample 2 ---
+Query: Explain the concept of neural networks. 
+Response: Neural networks are a series of algorithms modeled after the structure of the human brain. They are used in machine learning and artificial intelligence for tasks such as image recognition, natural la...
+KL (MC): 73.5000, KL (Exact): 80.6875
+
+--- Sample 3 ---
+Query: How does gradient descent work? 
+Response: # Strictly follow the provided hint
+Step0 = 1 / 2
+Step1 = Step0 - 1
+Step2 = 1 - Step0
+Step3 = Step1 / Step2
+
+ans = Step3###End Python program###End Python program###End Python program###End Python pro...
+KL (MC): 275.5000, KL (Exact): 259.7500
+
+--- Sample 4 ---
+Query: What are transformers in deep learning? 
+Response: Transformers in deep learning are a type of neural network used primarily for natural language processing (NLP). They allow for more efficient and effective translation of text from one language to an...
+KL (MC): 104.4375, KL (Exact): 113.0625
+
+--- Sample 5 ---
+Query: Describe reinforcement learning. 
+Response: 
+
+# Done
+# Calculate the weight loss from the table per the hint strictly
+w0 = 56 / 3
+w1 = w0 - 1
+w2 = w1 / 56
+ans = w2###End Python Code###End Python Code###End Python Code###End Python Code###End Py...
+KL (MC): 259.2500, KL (Exact): 246.6250
+
+--- Sample 6 ---
+Query: What is the difference between supervised and unsupervised learning? 
+Response: supervised_learning_diff = "supervised learning involves learning where a teacher or guidance provides the labels/targets for the model to learn, whereas unsupervised learning involves learning withou...
+KL (MC): 223.7500, KL (Exact): 248.7500
+
+--- Sample 7 ---
+Query: How do convolutional neural networks work? 
+Response: Conventional neural networks consist of multiple layers of interconnected artificial neurons, analogous to biological neurons of the brain. Neurons in a conventional neural network perform the followi...
+KL (MC): 94.8750, KL (Exact): 98.1875
+
+--- Sample 8 ---
+Query: What is attention mechanism? 
+Response: An attention mechanism, as the name suggests, directs a neural network to pay attention to certain inputs relative to others. This is particularly useful in complex tasks, where paying attention to th...
+KL (MC): 138.3750, KL (Exact): 132.0000
+
+--- Sample 9 ---
+Query: Explain backpropagation. 
+Response: Backpropagation is a method used in artificial intelligence to calculate the gradient of the error function with respect to the weights. It is used in neural networks for training and for fine-tuning ...
+KL (MC): 109.8125, KL (Exact): 122.9375
+
+--- Sample 10 ---
+Query: What is transfer learning? 
+Response: Transfer learning is a machine learning technique that involves reusing pre-trained models or knowledge across models for new tasks. It's used in situations where acquiring new data for training is to...
+KL (MC): 113.3750, KL (Exact): 109.6875
+
+======================================================================
+Results saved to: results/kl_divergence_mistralai_Mistral-7B-Instruct-_20251205_170312
+======================================================================

@@ -1,26 +1,144 @@
 """
 Compute KL divergence between a fine-tuned model and the base model.
-This script reuses the KL computation logic from utils.py.
-Supports multi-GPU setups to avoid OOM errors.
+Supports multi-GPU setups, custom queries from JSON, and PDF context injection.
 """
 
 import torch
 import torch.nn.functional as F
 from transformers import AutoModelForCausalLM, AutoTokenizer
 from peft import PeftModel
-from typing import List, Optional
+from typing import List, Optional, Dict, Any
 import numpy as np
 import json
 import os
 from datetime import datetime
 
 
-# ============== Utility functions from utils.py ==============
+# ============== PDF Text Extraction ==============
+
+def extract_text_from_pdf(pdf_path: str, max_pages: Optional[int] = None) -> str:
+    """Extract text from a PDF file."""
+    try:
+        import fitz  # PyMuPDF
+        doc = fitz.open(pdf_path)
+        text_parts = []
+        pages_to_read = min(len(doc), max_pages) if max_pages else len(doc)
+        for page_num in range(pages_to_read):
+            page = doc[page_num]
+            text_parts.append(page.get_text())
+        doc.close()
+        return "\n".join(text_parts)
+    except ImportError:
+        try:
+            import pdfplumber
+            text_parts = []
+            with pdfplumber.open(pdf_path) as pdf:
+                pages_to_read = min(len(pdf.pages), max_pages) if max_pages else len(pdf.pages)
+                for i in range(pages_to_read):
+                    page_text = pdf.pages[i].extract_text()
+                    if page_text:
+                        text_parts.append(page_text)
+            return "\n".join(text_parts)
+        except ImportError:
+            raise ImportError(
+                "No PDF library found. Install with:\n"
+                "  pip install pymupdf --break-system-packages"
+            )
+
+
+def load_document_context(doc_config: Dict[str, Any], base_dir: str = ".") -> str:
+    """Load document context from various sources."""
+    doc_type = doc_config.get("type", "text")
+    
+    if doc_type == "text":
+        return doc_config.get("text", "")
+    elif doc_type == "pdf":
+        pdf_path = doc_config.get("path", "")
+        if not os.path.isabs(pdf_path):
+            pdf_path = os.path.join(base_dir, pdf_path)
+        max_pages = doc_config.get("max_pages", None)
+        return extract_text_from_pdf(pdf_path, max_pages)
+    elif doc_type == "txt":
+        txt_path = doc_config.get("path", "")
+        if not os.path.isabs(txt_path):
+            txt_path = os.path.join(base_dir, txt_path)
+        with open(txt_path, "r", encoding="utf-8") as f:
+            return f.read()
+    else:
+        raise ValueError(f"Unknown document type: {doc_type}")
+
+
+# ============== Query Loading ==============
+
+def load_queries_from_json(json_path: str) -> List[Dict[str, Any]]:
+    """
+    Load queries from a JSON file.
+    
+    Expected format:
+    {
+        "queries": [
+            {
+                "question": "What is...",
+                "expected_answer": "The answer is...",  // optional
+                "documents": [  // optional
+                    {"type": "pdf", "path": "path/to/doc.pdf", "max_pages": 10},
+                    {"type": "text", "text": "Some context..."},
+                    {"type": "txt", "path": "path/to/doc.txt"}
+                ]
+            }
+        ]
+    }
+    """
+    with open(json_path, "r", encoding="utf-8") as f:
+        data = json.load(f)
+    
+    if isinstance(data, list):
+        return data
+    elif isinstance(data, dict) and "queries" in data:
+        return data["queries"]
+    else:
+        raise ValueError("JSON must contain a list or a dict with 'queries' key")
+
+
+def format_prompt_with_context(
+    question: str,
+    documents: Optional[List[Dict[str, Any]]] = None,
+    base_dir: str = ".",
+    prompt_template: str = "mistral",
+    max_context_chars: int = 8000,
+) -> str:
+    """Format a prompt with optional document context."""
+    context_parts = []
+    
+    if documents:
+        for i, doc_config in enumerate(documents):
+            try:
+                doc_text = load_document_context(doc_config, base_dir)
+                if len(doc_text) > max_context_chars // len(documents):
+                    doc_text = doc_text[:max_context_chars // len(documents)] + "\n[... truncated ...]"
+                context_parts.append(f"Document {i+1}:\n{doc_text}")
+            except Exception as e:
+                print(f"Warning: Could not load document {i+1}: {e}")
+    
+    if context_parts:
+        context = "\n\n".join(context_parts)
+        full_question = f"Based on the following documents, answer the question.\n\n{context}\n\nQuestion: {question}"
+    else:
+        full_question = question
+    
+    if prompt_template == "mistral":
+        return f"<s>[INST] {full_question} [/INST]"
+    elif prompt_template == "llama":
+        return f"<|begin_of_text|><|start_header_id|>user<|end_header_id|>\n\n{full_question}<|eot_id|><|start_header_id|>assistant<|end_header_id|>\n\n"
+    elif prompt_template == "raw":
+        return full_question
+    else:
+        return f"<s>[INST] {full_question} [/INST]"
+
+
+# ============== Utility functions ==============
 
 def selective_log_softmax(logits, index):
-    """
-    A memory-efficient implementation of the common `log_softmax -> gather` operation.
-    """
     if logits.dtype in [torch.float32, torch.float64]:
         selected_logits = torch.gather(logits, dim=-1, index=index.unsqueeze(-1)).squeeze(-1)
         logsumexp_values = torch.stack([torch.logsumexp(lg, dim=-1) for lg in logits])
@@ -36,32 +154,21 @@ def selective_log_softmax(logits, index):
 
 
 def compute_kl(new_logprobs, ref_logprobs, logits_p=None, logits_q=None):
-    """
-    Compute KL divergence.
-    
-    Two modes:
-    - MC estimator (default): KL ≈ log p(x) - log q(x) under samples from p
-    - Exact (stepwise/RB): KL = sum_x p(x) * (log p(x) - log q(x))
-    """
     if logits_p is not None:
-        # Exact KL computation (stepwise method)
         logp = torch.log_softmax(logits_p, dim=-1)
         logq = torch.log_softmax(logits_q, dim=-1)
         return torch.sum(torch.exp(logp) * (logp - logq), dim=-1)
-    # MC estimator
     return new_logprobs - ref_logprobs
 
 
 def first_true_indices(tensor):
-    """Find the first True index in each row."""
-    # If no True value, return the length of the tensor
     indices = torch.where(tensor, 
                           torch.arange(tensor.shape[1], device=tensor.device).expand_as(tensor),
                           tensor.shape[1] * torch.ones_like(tensor))
     return indices.min(dim=1).values
 
 
-# ============== Main KL computation function ==============
+# ============== Main KL computation ==============
 
 def compute_kl_between_models(
     policy_model,
@@ -74,23 +181,6 @@ def compute_kl_between_models(
     temperature: float = 1.0,
     batch_size: int = 4,
 ):
-    """
-    Compute KL divergence between policy (fine-tuned) and reference (base) model.
-    
-    Args:
-        policy_model: The fine-tuned model
-        ref_model: The reference/base model
-        tokenizer: The tokenizer
-        prompts: List of prompts to generate from
-        policy_device: Device for policy model (e.g., "cuda:0")
-        ref_device: Device for reference model (e.g., "cuda:1")
-        max_new_tokens: Maximum tokens to generate
-        temperature: Sampling temperature
-        batch_size: Batch size for processing
-    
-    Returns:
-        dict with 'kl_mc' (MC estimator), 'kl_exact' (exact KL), and details
-    """
     policy_model.eval()
     ref_model.eval()
     
@@ -103,24 +193,21 @@ def compute_kl_between_models(
     
     for i in range(0, len(prompts), batch_size):
         batch_prompts = prompts[i:i + batch_size]
+        print(f"  Processing batch {i//batch_size + 1}/{(len(prompts) + batch_size - 1)//batch_size}...")
         
-        # Tokenize prompts
         inputs = tokenizer(
             batch_prompts,
             return_tensors="pt",
             padding=True,
             truncation=True,
-            max_length=512
+            max_length=4096
         )
         
-        # Move inputs to policy device for generation
         inputs_policy = {k: v.to(policy_device) for k, v in inputs.items()}
-        
         query = inputs_policy["input_ids"]
         context_length = query.shape[1]
         
         with torch.no_grad():
-            # Generate from policy model
             generation_output = policy_model.generate(
                 **inputs_policy,
                 max_new_tokens=max_new_tokens,
@@ -135,39 +222,31 @@ def compute_kl_between_models(
             query_response = generation_output.sequences
             response = query_response[:, context_length:]
             
-            # Get policy logits (on policy_device)
             policy_attention_mask = (query_response != tokenizer.pad_token_id).long()
             policy_output = policy_model(query_response, attention_mask=policy_attention_mask)
             policy_logits = policy_output.logits[:, context_length - 1: -1]
             policy_logits = policy_logits / (temperature + 1e-7)
             policy_logprob = selective_log_softmax(policy_logits, response)
             
-            # Get reference logits (move data to ref_device)
             query_response_ref = query_response.to(ref_device)
             ref_attention_mask = (query_response_ref != tokenizer.pad_token_id).long()
             ref_output = ref_model(query_response_ref, attention_mask=ref_attention_mask)
             ref_logits = ref_output.logits[:, context_length - 1: -1]
             ref_logits = ref_logits / (temperature + 1e-7)
             
-            # Move ref_logits back to policy_device for KL computation
             ref_logits = ref_logits.to(policy_device)
-            response_for_ref = response  # already on policy_device
-            ref_logprob = selective_log_softmax(ref_logits, response_for_ref)
+            ref_logprob = selective_log_softmax(ref_logits, response)
             
-            # Compute sequence lengths (mask out padding)
             sequence_lengths = first_true_indices(response == tokenizer.pad_token_id) - 1
             response_idxs = torch.arange(response.shape[1], device=policy_device).repeat(response.shape[0], 1)
             padding_mask = response_idxs > sequence_lengths.unsqueeze(1)
             
-            # Mask invalid positions
             policy_logprob = torch.masked_fill(policy_logprob, padding_mask, INVALID_LOGPROB)
             ref_logprob = torch.masked_fill(ref_logprob, padding_mask, INVALID_LOGPROB)
             
-            # Compute KL (MC estimator)
             kl_mc = compute_kl(policy_logprob, ref_logprob)
             kl_mc = torch.masked_fill(kl_mc, padding_mask, 0.0).sum(1)
             
-            # Compute exact KL (stepwise/RB method)
             kl_exact = compute_kl(policy_logprob, ref_logprob, logits_p=policy_logits, logits_q=ref_logits)
             kl_exact = torch.masked_fill(kl_exact, padding_mask, 0.0).sum(1)
             
@@ -176,7 +255,6 @@ def compute_kl_between_models(
             all_queries.extend(tokenizer.batch_decode(query, skip_special_tokens=True))
             all_responses.extend(tokenizer.batch_decode(response, skip_special_tokens=True))
             
-            # Clear GPU cache periodically
             if i % (batch_size * 4) == 0:
                 torch.cuda.empty_cache()
     
@@ -193,28 +271,11 @@ def compute_kl_between_models(
 
 
 def save_results(results: dict, config: dict, output_dir: str = "results"):
-    """
-    Save KL divergence results and configuration to a results folder.
-    
-    Args:
-        results: Dictionary containing KL values and samples
-        config: Dictionary containing experiment configuration
-        output_dir: Directory to save results (default: "results")
-    
-    Returns:
-        Path to the saved results directory
-    """
-    # Create timestamp for unique folder name
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    
-    # Create a descriptive folder name
     adapter_short = config.get("adapter_name", "unknown").split("/")[-1][:30]
     run_dir = os.path.join(output_dir, f"kl_divergence_{adapter_short}_{timestamp}")
-    
-    # Create directories
     os.makedirs(run_dir, exist_ok=True)
     
-    # 1. Save summary statistics
     summary = {
         "kl_mc_mean": float(results["kl_mc_mean"]),
         "kl_mc_std": float(results["kl_mc_std"]),
@@ -227,16 +288,16 @@ def save_results(results: dict, config: dict, output_dir: str = "results"):
     with open(os.path.join(run_dir, "summary.json"), "w") as f:
         json.dump(summary, f, indent=2)
     
-    # 2. Save full configuration
+    # Save config without prompts (they can be huge with PDF content)
+    config_to_save = {k: v for k, v in config.items() if k != "prompts_used"}
     with open(os.path.join(run_dir, "config.json"), "w") as f:
-        json.dump(config, f, indent=2)
+        json.dump(config_to_save, f, indent=2)
     
-    # 3. Save per-sample results
     samples = []
     for i in range(len(results["kl_mc_values"])):
         samples.append({
             "index": i,
-            "query": results["queries"][i],
+            "query": results["queries"][i][:2000],  # Truncate for readability
             "response": results["responses"][i],
             "kl_mc": float(results["kl_mc_values"][i]),
             "kl_exact": float(results["kl_exact_values"][i]),
@@ -245,11 +306,9 @@ def save_results(results: dict, config: dict, output_dir: str = "results"):
     with open(os.path.join(run_dir, "samples.json"), "w") as f:
         json.dump(samples, f, indent=2)
     
-    # 4. Save raw KL values as numpy arrays for easy loading
     np.save(os.path.join(run_dir, "kl_mc_values.npy"), np.array(results["kl_mc_values"]))
     np.save(os.path.join(run_dir, "kl_exact_values.npy"), np.array(results["kl_exact_values"]))
     
-    # 5. Save a human-readable report
     report_lines = [
         "=" * 70,
         "KL DIVERGENCE EXPERIMENT REPORT",
@@ -259,12 +318,10 @@ def save_results(results: dict, config: dict, output_dir: str = "results"):
         "-" * 40,
         f"  Base Model:     {config.get('model_name', 'N/A')}",
         f"  Adapter:        {config.get('adapter_name', 'N/A')}",
-        f"  Policy Device:  {config.get('policy_device', 'N/A')}",
-        f"  Ref Device:     {config.get('ref_device', 'N/A')}",
+        f"  Query Source:   {config.get('query_source', 'N/A')}",
+        f"  Num Prompts:    {config.get('num_prompts', 'N/A')}",
         f"  Max New Tokens: {config.get('max_new_tokens', 'N/A')}",
         f"  Temperature:    {config.get('temperature', 'N/A')}",
-        f"  Batch Size:     {config.get('batch_size', 'N/A')}",
-        f"  Num Prompts:    {config.get('num_prompts', 'N/A')}",
         "",
         "RESULTS:",
         "-" * 40,
@@ -276,40 +333,26 @@ def save_results(results: dict, config: dict, output_dir: str = "results"):
     ]
     
     for i, (q, r, kl_mc, kl_ex) in enumerate(zip(
-        results["queries"],
+        config.get("original_questions", results["queries"]),
         results["responses"],
         results["kl_mc_values"],
         results["kl_exact_values"]
     )):
         report_lines.extend([
             f"\n--- Sample {i+1} ---",
-            f"Query: {q[:200]}{'...' if len(q) > 200 else ''}",
-            f"Response: {r[:200]}{'...' if len(r) > 200 else ''}",
+            f"Question: {str(q)[:300]}{'...' if len(str(q)) > 300 else ''}",
+            f"Response: {r[:300]}{'...' if len(r) > 300 else ''}",
             f"KL (MC): {kl_mc:.4f}, KL (Exact): {kl_ex:.4f}",
         ])
-    
-    report_lines.extend([
-        "",
-        "=" * 70,
-        f"Results saved to: {run_dir}",
-        "=" * 70,
-    ])
     
     with open(os.path.join(run_dir, "report.txt"), "w") as f:
         f.write("\n".join(report_lines))
     
     print(f"\nResults saved to: {run_dir}")
-    print(f"  - summary.json:        Summary statistics")
-    print(f"  - config.json:         Experiment configuration")
-    print(f"  - samples.json:        Per-sample results with queries/responses")
-    print(f"  - kl_mc_values.npy:    Raw MC KL values (numpy array)")
-    print(f"  - kl_exact_values.npy: Raw exact KL values (numpy array)")
-    print(f"  - report.txt:          Human-readable report")
-    
     return run_dir
 
 
-# ============== Example usage with your Mistral models ==============
+# ============== Main ==============
 
 if __name__ == "__main__":
     import argparse
@@ -318,24 +361,28 @@ if __name__ == "__main__":
     parser.add_argument("--adapter_name", type=str, 
                         default="liuhaozhe6788/mistralai_Mistral-7B-Instruct-v0.3-peftq_proj_k_proj_v_proj_o_proj-bs1-ne1")
     parser.add_argument("--model_name", type=str, default="mistralai/Mistral-7B-Instruct-v0.3")
-    parser.add_argument("--policy_device", type=str, default="cuda:0", help="GPU for policy/fine-tuned model")
-    parser.add_argument("--ref_device", type=str, default="cuda:1", help="GPU for reference/base model")
-    parser.add_argument("--max_new_tokens", type=int, default=128)
-    parser.add_argument("--batch_size", type=int, default=2)
-    parser.add_argument("--num_prompts", type=int, default=10, help="Number of prompts to use")
-    parser.add_argument("--temperature", type=float, default=1.0, help="Sampling temperature")
-    parser.add_argument("--output_dir", type=str, default="results", help="Directory to save results")
+    parser.add_argument("--policy_device", type=str, default="cuda:0")
+    parser.add_argument("--ref_device", type=str, default="cuda:1")
+    parser.add_argument("--max_new_tokens", type=int, default=256)
+    parser.add_argument("--batch_size", type=int, default=1)
+    parser.add_argument("--num_prompts", type=int, default=None)
+    parser.add_argument("--temperature", type=float, default=1.0)
+    parser.add_argument("--output_dir", type=str, default="results")
+    parser.add_argument("--queries_json", type=str, default=None,
+                        help="Path to JSON file with custom queries")
+    parser.add_argument("--prompt_template", type=str, default="mistral",
+                        choices=["mistral", "llama", "raw"])
+    parser.add_argument("--max_context_chars", type=int, default=8000)
+    
     args = parser.parse_args()
     
-    # Check available GPUs
     num_gpus = torch.cuda.device_count()
     print(f"Available GPUs: {num_gpus}")
     for i in range(num_gpus):
         print(f"  GPU {i}: {torch.cuda.get_device_name(i)}")
     
     if num_gpus < 2:
-        print("\nWARNING: Less than 2 GPUs available. Using single GPU mode.")
-        print("This may cause OOM errors with large models.")
+        print("\nWARNING: Less than 2 GPUs available.")
         args.ref_device = args.policy_device
     
     print("\nLoading tokenizer...")
@@ -350,7 +397,7 @@ if __name__ == "__main__":
         device_map=args.ref_device,
     )
     
-    print(f"\nLoading fine-tuned model (base + LoRA adapter) on {args.policy_device}...")
+    print(f"\nLoading fine-tuned model on {args.policy_device}...")
     policy_model = AutoModelForCausalLM.from_pretrained(
         args.model_name,
         torch_dtype=torch.float16,
@@ -358,36 +405,51 @@ if __name__ == "__main__":
     )
     policy_model = PeftModel.from_pretrained(policy_model, args.adapter_name)
     
-    # Print memory usage
-    print("\nGPU Memory Usage after loading models:")
-    for i in range(num_gpus):
-        allocated = torch.cuda.memory_allocated(i) / 1024**3
-        reserved = torch.cuda.memory_reserved(i) / 1024**3
-        print(f"  GPU {i}: {allocated:.2f} GB allocated, {reserved:.2f} GB reserved")
+    # Load queries
+    query_source = "default"
+    original_questions = []
     
-    # Sample prompts - you can replace these with your actual prompts
-    sample_prompts = [
-        "<s>[INST] What is machine learning? [/INST]",
-        "<s>[INST] Explain the concept of neural networks. [/INST]",
-        "<s>[INST] How does gradient descent work? [/INST]",
-        "<s>[INST] What are transformers in deep learning? [/INST]",
-        "<s>[INST] Describe reinforcement learning. [/INST]",
-        "<s>[INST] What is the difference between supervised and unsupervised learning? [/INST]",
-        "<s>[INST] How do convolutional neural networks work? [/INST]",
-        "<s>[INST] What is attention mechanism? [/INST]",
-        "<s>[INST] Explain backpropagation. [/INST]",
-        "<s>[INST] What is transfer learning? [/INST]",
-    ][:args.num_prompts]
+    if args.queries_json:
+        print(f"\nLoading queries from: {args.queries_json}")
+        query_data = load_queries_from_json(args.queries_json)
+        base_dir = os.path.dirname(os.path.abspath(args.queries_json))
+        
+        prompts = []
+        for q in query_data:
+            question = q.get("question", q.get("instruction", ""))
+            documents = q.get("documents", None)
+            
+            formatted_prompt = format_prompt_with_context(
+                question=question,
+                documents=documents,
+                base_dir=base_dir,
+                prompt_template=args.prompt_template,
+                max_context_chars=args.max_context_chars,
+            )
+            prompts.append(formatted_prompt)
+            original_questions.append(question)
+        
+        query_source = args.queries_json
+        print(f"  Loaded {len(prompts)} queries")
+    else:
+        prompts = [
+            "<s>[INST] What is machine learning? [/INST]",
+            "<s>[INST] Explain neural networks. [/INST]",
+            "<s>[INST] How does gradient descent work? [/INST]",
+        ]
+        original_questions = prompts
     
-    print(f"\nComputing KL divergence on {len(sample_prompts)} prompts...")
-    print(f"  Policy model: {args.policy_device}")
-    print(f"  Reference model: {args.ref_device}")
+    if args.num_prompts is not None:
+        prompts = prompts[:args.num_prompts]
+        original_questions = original_questions[:args.num_prompts]
+    
+    print(f"\nComputing KL divergence on {len(prompts)} prompts...")
     
     results = compute_kl_between_models(
         policy_model=policy_model,
         ref_model=ref_model,
         tokenizer=tokenizer,
-        prompts=sample_prompts,
+        prompts=prompts,
         policy_device=args.policy_device,
         ref_device=args.ref_device,
         max_new_tokens=args.max_new_tokens,
@@ -396,25 +458,12 @@ if __name__ == "__main__":
     )
     
     print("\n" + "="*60)
-    print("KL DIVERGENCE RESULTS (policy || reference)")
+    print("KL DIVERGENCE RESULTS")
     print("="*60)
     print(f"MC Estimator KL:     {results['kl_mc_mean']:.4f} ± {results['kl_mc_std']:.4f}")
     print(f"Exact (Stepwise) KL: {results['kl_exact_mean']:.4f} ± {results['kl_exact_std']:.4f}")
     print("="*60)
     
-    print("\nPer-sample KL values:")
-    for i, (q, r, kl_mc, kl_ex) in enumerate(zip(
-        results['queries'][:5], 
-        results['responses'][:5],
-        results['kl_mc_values'][:5],
-        results['kl_exact_values'][:5]
-    )):
-        print(f"\n--- Sample {i+1} ---")
-        print(f"Query: {q[:100]}...")
-        print(f"Response: {r[:100]}...")
-        print(f"KL (MC): {kl_mc:.4f}, KL (Exact): {kl_ex:.4f}")
-    
-    # Save results
     config = {
         "model_name": args.model_name,
         "adapter_name": args.adapter_name,
@@ -422,11 +471,13 @@ if __name__ == "__main__":
         "ref_device": args.ref_device,
         "max_new_tokens": args.max_new_tokens,
         "batch_size": args.batch_size,
-        "num_prompts": args.num_prompts,
+        "num_prompts": len(prompts),
         "temperature": args.temperature,
-        "prompts_used": sample_prompts,
+        "query_source": query_source,
+        "prompt_template": args.prompt_template,
+        "max_context_chars": args.max_context_chars,
+        "original_questions": original_questions,
         "num_gpus": num_gpus,
-        "gpu_names": [torch.cuda.get_device_name(i) for i in range(num_gpus)],
     }
     
     save_results(results, config, output_dir=args.output_dir)

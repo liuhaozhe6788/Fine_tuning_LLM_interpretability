@@ -1,0 +1,8 @@
+{
+  "kl_mc_mean": 222.5,
+  "kl_mc_std": 74.0625,
+  "kl_exact_mean": 219.375,
+  "kl_exact_std": 62.03125,
+  "num_samples": 6,
+  "timestamp": "20251205_172226"
+}

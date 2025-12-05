@@ -85,3 +85,11 @@ nohup python main.py FinQA mistralai/Mistral-7B-Instruct-v0.3 liuhaozhe6788 -P -
 ```bash
 python inference.py
 ```
+
+### KL Divergerence
+```
+python compute_kl_divergence.py     
+    --adapter_name "liuhaozhe6788/mistralai_Mistral-7B-Instruct-v0.3-peftq_proj_k_proj_v_proj_o_proj-bs1-ne1"     --model_name "mistralai/Mistral-7B-Instruct-v0.3"     
+    --num_prompts 20     
+    --batch_size 4
+```

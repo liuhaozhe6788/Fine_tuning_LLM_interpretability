@@ -1,0 +1,27 @@
+{
+  "model_name": "mistralai/Mistral-7B-Instruct-v0.3",
+  "adapter_name": "liuhaozhe6788/mistralai_Mistral-7B-Instruct-v0.3-peftq_proj_k_proj_v_proj_o_proj-bs1-ne1",
+  "policy_device": "cuda:0",
+  "ref_device": "cuda:1",
+  "max_new_tokens": 128,
+  "batch_size": 4,
+  "num_prompts": 20,
+  "temperature": 1.0,
+  "prompts_used": [
+    "<s>[INST] What is machine learning? [/INST]",
+    "<s>[INST] Explain the concept of neural networks. [/INST]",
+    "<s>[INST] How does gradient descent work? [/INST]",
+    "<s>[INST] What are transformers in deep learning? [/INST]",
+    "<s>[INST] Describe reinforcement learning. [/INST]",
+    "<s>[INST] What is the difference between supervised and unsupervised learning? [/INST]",
+    "<s>[INST] How do convolutional neural networks work? [/INST]",
+    "<s>[INST] What is attention mechanism? [/INST]",
+    "<s>[INST] Explain backpropagation. [/INST]",
+    "<s>[INST] What is transfer learning? [/INST]"
+  ],
+  "num_gpus": 2,
+  "gpu_names": [
+    "NVIDIA GeForce RTX 4090",
+    "NVIDIA GeForce RTX 4090"
+  ]
+}
