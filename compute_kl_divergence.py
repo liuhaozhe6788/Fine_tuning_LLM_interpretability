@@ -180,14 +180,22 @@ def compute_kl_between_models(
     max_new_tokens: int = 128,
     temperature: float = 1.0,
     batch_size: int = 4,
+    generate_ref_responses: bool = True,  # New parameter
 ):
+    """
+    Compute KL divergence and generate responses from both models.
+    
+    Args:
+        generate_ref_responses: If True, also generate responses from reference model
+    """
     policy_model.eval()
     ref_model.eval()
     
     all_kl_mc = []
     all_kl_exact = []
     all_queries = []
-    all_responses = []
+    all_policy_responses = []
+    all_ref_responses = []
     
     INVALID_LOGPROB = 1.0
     
@@ -208,7 +216,8 @@ def compute_kl_between_models(
         context_length = query.shape[1]
         
         with torch.no_grad():
-            generation_output = policy_model.generate(
+            # ===== Generate from POLICY model =====
+            policy_generation = policy_model.generate(
                 **inputs_policy,
                 max_new_tokens=max_new_tokens,
                 temperature=temperature + 1e-7,
@@ -219,14 +228,38 @@ def compute_kl_between_models(
                 output_scores=True,
             )
             
-            query_response = generation_output.sequences
-            response = query_response[:, context_length:]
+            query_response = policy_generation.sequences
+            policy_response = query_response[:, context_length:]
             
+            # Decode policy responses
+            policy_response_texts = tokenizer.batch_decode(policy_response, skip_special_tokens=True)
+            all_policy_responses.extend(policy_response_texts)
+            
+            # ===== Generate from REFERENCE model =====
+            if generate_ref_responses:
+                inputs_ref = {k: v.to(ref_device) for k, v in inputs.items()}
+                ref_generation = ref_model.generate(
+                    **inputs_ref,
+                    max_new_tokens=max_new_tokens,
+                    temperature=temperature + 1e-7,
+                    do_sample=True,
+                    top_p=1.0,
+                    pad_token_id=tokenizer.pad_token_id,
+                    return_dict_in_generate=True,
+                    output_scores=True,
+                )
+                ref_response = ref_generation.sequences[:, context_length:]
+                ref_response_texts = tokenizer.batch_decode(ref_response, skip_special_tokens=True)
+                all_ref_responses.extend(ref_response_texts)
+            else:
+                all_ref_responses.extend(["[Not generated]"] * len(batch_prompts))
+            
+            # ===== Compute KL divergence (using policy model's generations) =====
             policy_attention_mask = (query_response != tokenizer.pad_token_id).long()
             policy_output = policy_model(query_response, attention_mask=policy_attention_mask)
             policy_logits = policy_output.logits[:, context_length - 1: -1]
             policy_logits = policy_logits / (temperature + 1e-7)
-            policy_logprob = selective_log_softmax(policy_logits, response)
+            policy_logprob = selective_log_softmax(policy_logits, policy_response)
             
             query_response_ref = query_response.to(ref_device)
             ref_attention_mask = (query_response_ref != tokenizer.pad_token_id).long()
@@ -235,10 +268,10 @@ def compute_kl_between_models(
             ref_logits = ref_logits / (temperature + 1e-7)
             
             ref_logits = ref_logits.to(policy_device)
-            ref_logprob = selective_log_softmax(ref_logits, response)
+            ref_logprob = selective_log_softmax(ref_logits, policy_response)
             
-            sequence_lengths = first_true_indices(response == tokenizer.pad_token_id) - 1
-            response_idxs = torch.arange(response.shape[1], device=policy_device).repeat(response.shape[0], 1)
+            sequence_lengths = first_true_indices(policy_response == tokenizer.pad_token_id) - 1
+            response_idxs = torch.arange(policy_response.shape[1], device=policy_device).repeat(policy_response.shape[0], 1)
             padding_mask = response_idxs > sequence_lengths.unsqueeze(1)
             
             policy_logprob = torch.masked_fill(policy_logprob, padding_mask, INVALID_LOGPROB)
@@ -253,7 +286,6 @@ def compute_kl_between_models(
             all_kl_mc.extend(kl_mc.cpu().numpy())
             all_kl_exact.extend(kl_exact.cpu().numpy())
             all_queries.extend(tokenizer.batch_decode(query, skip_special_tokens=True))
-            all_responses.extend(tokenizer.batch_decode(response, skip_special_tokens=True))
             
             if i % (batch_size * 4) == 0:
                 torch.cuda.empty_cache()
@@ -266,7 +298,10 @@ def compute_kl_between_models(
         "kl_mc_values": all_kl_mc,
         "kl_exact_values": all_kl_exact,
         "queries": all_queries,
-        "responses": all_responses,
+        "policy_responses": all_policy_responses,
+        "ref_responses": all_ref_responses,
+        # Keep backward compatibility
+        "responses": all_policy_responses,
     }
 
 
@@ -298,7 +333,8 @@ def save_results(results: dict, config: dict, output_dir: str = "results"):
         samples.append({
             "index": i,
             "query": results["queries"][i][:2000],  # Truncate for readability
-            "response": results["responses"][i],
+            "policy_response": results["policy_responses"][i],
+            "ref_response": results["ref_responses"][i],
             "kl_mc": float(results["kl_mc_values"][i]),
             "kl_exact": float(results["kl_exact_values"][i]),
         })
@@ -332,16 +368,23 @@ def save_results(results: dict, config: dict, output_dir: str = "results"):
         "-" * 40,
     ]
     
-    for i, (q, r, kl_mc, kl_ex) in enumerate(zip(
+    for i, (q, policy_r, ref_r, kl_mc, kl_ex) in enumerate(zip(
         config.get("original_questions", results["queries"]),
-        results["responses"],
+        results["policy_responses"],
+        results["ref_responses"],
         results["kl_mc_values"],
         results["kl_exact_values"]
     )):
         report_lines.extend([
             f"\n--- Sample {i+1} ---",
             f"Question: {str(q)[:300]}{'...' if len(str(q)) > 300 else ''}",
-            f"Response: {r[:300]}{'...' if len(r) > 300 else ''}",
+            f"",
+            f"POLICY (Fine-tuned) Response:",
+            f"{policy_r[:500]}{'...' if len(policy_r) > 500 else ''}",
+            f"",
+            f"REFERENCE (Base) Response:",
+            f"{ref_r[:500]}{'...' if len(ref_r) > 500 else ''}",
+            f"",
             f"KL (MC): {kl_mc:.4f}, KL (Exact): {kl_ex:.4f}",
         ])
     
@@ -373,6 +416,10 @@ if __name__ == "__main__":
     parser.add_argument("--prompt_template", type=str, default="mistral",
                         choices=["mistral", "llama", "raw"])
     parser.add_argument("--max_context_chars", type=int, default=8000)
+    parser.add_argument("--generate_ref_responses", action="store_true", default=True,
+                        help="Generate responses from reference model too (default: True)")
+    parser.add_argument("--no_ref_responses", action="store_true",
+                        help="Skip generating reference model responses (faster)")
     
     args = parser.parse_args()
     
@@ -444,6 +491,8 @@ if __name__ == "__main__":
         original_questions = original_questions[:args.num_prompts]
     
     print(f"\nComputing KL divergence on {len(prompts)} prompts...")
+    generate_ref = not args.no_ref_responses
+    print(f"  Generate reference responses: {generate_ref}")
     
     results = compute_kl_between_models(
         policy_model=policy_model,
@@ -455,6 +504,7 @@ if __name__ == "__main__":
         max_new_tokens=args.max_new_tokens,
         batch_size=args.batch_size,
         temperature=args.temperature,
+        generate_ref_responses=generate_ref,
     )
     
     print("\n" + "="*60)
