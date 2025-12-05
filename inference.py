@@ -6,7 +6,7 @@ from vllm import LLM, SamplingParams
 from vllm.lora.request import LoRARequest
 from vllm.distributed.parallel_state import destroy_model_parallel
 
-
+# Change this to your desired adapter name
 adapter_name= "liuhaozhe6788/mistralai_Mistral-7B-Instruct-v0.3-peftq_proj_k_proj_v_proj_o_proj-bs1-ne1"
 model_name = "mistralai/Mistral-7B-Instruct-v0.3"
 

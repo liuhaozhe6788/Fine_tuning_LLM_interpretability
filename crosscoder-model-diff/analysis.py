@@ -10,10 +10,8 @@ cross_coder = CrossCoder.load_from_hf(device=device)
 
 model_name = "Mistral-7B-Instruct-v0.3"
 norms = cross_coder.W_dec.norm(dim=-1)
-norms.shape
 
 relative_norms = norms[:, 1] / norms.sum(dim=-1)
-relative_norms.shape
 
 plt.figure(figsize=(10, 6))
 sns.histplot(
@@ -36,13 +34,11 @@ num_acts_large_norm = (relative_norms > 0.75).sum()
 print(f"Number of acts with relative norm smaller than 0.25: {num_acts_small_norm}")
 print(f"Number of acts with relative norm larger than 0.75: {num_acts_large_norm}")
 
-shared_latent_mask = (relative_norms < 0.75) & (relative_norms > 0.25)
-shared_latent_mask.shape
+shared_latent_mask = (relative_norms < 0.7) & (relative_norms > 0.3)
 
 # Cosine similarity of crosscoder vectors between models
 
 cosine_sims = (cross_coder.W_dec[:, 0, :] * cross_coder.W_dec[:, 1, :]).sum(dim=-1) / (cross_coder.W_dec[:, 0, :].norm(dim=-1) * cross_coder.W_dec[:, 1, :].norm(dim=-1))
-cosine_sims.shape
 
 plt.figure(figsize=(10, 6))
 sns.histplot(

@@ -14,8 +14,11 @@ import json
 HF_TOKEN = os.environ.get("HF_TOKEN")
 login(HF_TOKEN)
 
+# Change this to your desired dataset name
 DATASET_ID_BASE_MODEL_NAME = "liuhaozhe6788/acts-finqa-base"
+# Change this to your desired dataset name
 DATASET_ID_FT_MODEL_NAME = "liuhaozhe6788/acts-finqa-lora"
+# Change this to your desired number of samples
 NUM_SAMPLES = 1024
 
 @torch.no_grad()

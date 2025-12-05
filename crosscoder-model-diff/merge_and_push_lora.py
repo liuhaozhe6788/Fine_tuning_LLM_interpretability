@@ -5,8 +5,11 @@ from transformers import AutoModelForCausalLM, AutoTokenizer
 from peft import PeftModel
 import os
 import torch
+
+
 # Configuration
 BASE_MODEL_ID = "mistralai/Mistral-7B-Instruct-v0.3"
+# Change this to your desired adapter name
 LORA_ADAPTER_ID = "liuhaozhe6788/mistralai_Mistral-7B-Instruct-v0.3-peftq_proj_k_proj_v_proj_o_proj-bs1-ne1"
 # Change this to your desired repo name
 OUTPUT_MODEL_ID = "liuhaozhe6788/mistralai_Mistral-7B-Instruct-v0.3-FinQA-lora"

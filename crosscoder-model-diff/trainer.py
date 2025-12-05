@@ -10,7 +10,8 @@ import os
 HF_TOKEN = os.environ.get("HF_TOKEN")
 login(token=os.getenv("HF_TOKEN"))
 
-
+# Change this to your desired repo name
+REPO_ID = "liuhaozhe6788/crosscoder-model-diff-mistral-7b-instruct-v0.3_finQA_lora"
 class Trainer:
     def __init__(self, cfg, base_model_acts: Dataset, ft_model_acts: Dataset):
         self.cfg = cfg
@@ -140,7 +141,7 @@ class Trainer:
 
         api = HfApi()
 
-        repo_id = "liuhaozhe6788/crosscoder-model-diff-mistral-7b-instruct-v0.3_finQA_lora"
+        repo_id = REPO_ID
         if not api.repo_exists(repo_id):
             api.create_repo(repo_id)
         api.upload_file(

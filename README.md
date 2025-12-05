@@ -43,7 +43,6 @@ python -m preprocessing.filter_valid_answers
 ---
 
 ## Fine-tuning with nohup
-
 ```bash
 nohup python main.py FinQA mistralai/Mistral-7B-Instruct-v0.3 liuhaozhe6788 -P> training.log 2>&1 &
 ```
@@ -87,5 +86,16 @@ python inference.py
 ```
 
 ## Crosscoder model diffing
+```bash
+cd crosscoder-model-diff/
+```
 ### Merge the peft model and push to Hugging Face Hub for nnsight
+```bash
+python merge_and_push_lora.py
+```
+### Crosscoder training
+```bash
+python train.py
+```
+### Crosscoder analysis
 

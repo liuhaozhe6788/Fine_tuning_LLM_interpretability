@@ -4,12 +4,10 @@ from trainer import Trainer
 from datasets import load_dataset
 device = 'cuda:0'
 
-# base_model = LanguageModel('mistralai/Mistral-7B-Instruct-v0.3', device_map=device)
-# chat_model = LanguageModel('liuhaozhe6788/mistralai_Mistral-7B-Instruct-v0.3-FinQA-lora', device_map=device)
-
+# Change this to your desired dataset name
 base_model_acts = load_dataset("liuhaozhe6788/acts-finqa-base", split="train")
+# Change this to your desired dataset name
 ft_model_acts = load_dataset("liuhaozhe6788/acts-finqa-lora", split="train")  
-
 
 default_cfg = {
     "seed": 49,
