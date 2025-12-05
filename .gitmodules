@@ -1,0 +1,3 @@
+[submodule "crosscoder_vis"]
+	path = crosscoder_vis
+	url = git@github.com:liuhaozhe6788/crosscoder_vis.git
