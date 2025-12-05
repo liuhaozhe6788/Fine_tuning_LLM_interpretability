@@ -10,6 +10,9 @@ from transformers import AutoModelForCausalLM, AutoTokenizer
 from peft import PeftModel
 from typing import List, Optional
 import numpy as np
+import json
+import os
+from datetime import datetime
 
 
 # ============== Utility functions from utils.py ==============
@@ -189,6 +192,123 @@ def compute_kl_between_models(
     }
 
 
+def save_results(results: dict, config: dict, output_dir: str = "results"):
+    """
+    Save KL divergence results and configuration to a results folder.
+    
+    Args:
+        results: Dictionary containing KL values and samples
+        config: Dictionary containing experiment configuration
+        output_dir: Directory to save results (default: "results")
+    
+    Returns:
+        Path to the saved results directory
+    """
+    # Create timestamp for unique folder name
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    
+    # Create a descriptive folder name
+    adapter_short = config.get("adapter_name", "unknown").split("/")[-1][:30]
+    run_dir = os.path.join(output_dir, f"kl_divergence_{adapter_short}_{timestamp}")
+    
+    # Create directories
+    os.makedirs(run_dir, exist_ok=True)
+    
+    # 1. Save summary statistics
+    summary = {
+        "kl_mc_mean": float(results["kl_mc_mean"]),
+        "kl_mc_std": float(results["kl_mc_std"]),
+        "kl_exact_mean": float(results["kl_exact_mean"]),
+        "kl_exact_std": float(results["kl_exact_std"]),
+        "num_samples": len(results["kl_mc_values"]),
+        "timestamp": timestamp,
+    }
+    
+    with open(os.path.join(run_dir, "summary.json"), "w") as f:
+        json.dump(summary, f, indent=2)
+    
+    # 2. Save full configuration
+    with open(os.path.join(run_dir, "config.json"), "w") as f:
+        json.dump(config, f, indent=2)
+    
+    # 3. Save per-sample results
+    samples = []
+    for i in range(len(results["kl_mc_values"])):
+        samples.append({
+            "index": i,
+            "query": results["queries"][i],
+            "response": results["responses"][i],
+            "kl_mc": float(results["kl_mc_values"][i]),
+            "kl_exact": float(results["kl_exact_values"][i]),
+        })
+    
+    with open(os.path.join(run_dir, "samples.json"), "w") as f:
+        json.dump(samples, f, indent=2)
+    
+    # 4. Save raw KL values as numpy arrays for easy loading
+    np.save(os.path.join(run_dir, "kl_mc_values.npy"), np.array(results["kl_mc_values"]))
+    np.save(os.path.join(run_dir, "kl_exact_values.npy"), np.array(results["kl_exact_values"]))
+    
+    # 5. Save a human-readable report
+    report_lines = [
+        "=" * 70,
+        "KL DIVERGENCE EXPERIMENT REPORT",
+        "=" * 70,
+        "",
+        "CONFIGURATION:",
+        "-" * 40,
+        f"  Base Model:     {config.get('model_name', 'N/A')}",
+        f"  Adapter:        {config.get('adapter_name', 'N/A')}",
+        f"  Policy Device:  {config.get('policy_device', 'N/A')}",
+        f"  Ref Device:     {config.get('ref_device', 'N/A')}",
+        f"  Max New Tokens: {config.get('max_new_tokens', 'N/A')}",
+        f"  Temperature:    {config.get('temperature', 'N/A')}",
+        f"  Batch Size:     {config.get('batch_size', 'N/A')}",
+        f"  Num Prompts:    {config.get('num_prompts', 'N/A')}",
+        "",
+        "RESULTS:",
+        "-" * 40,
+        f"  MC Estimator KL:     {results['kl_mc_mean']:.4f} ± {results['kl_mc_std']:.4f}",
+        f"  Exact (Stepwise) KL: {results['kl_exact_mean']:.4f} ± {results['kl_exact_std']:.4f}",
+        "",
+        "PER-SAMPLE KL VALUES:",
+        "-" * 40,
+    ]
+    
+    for i, (q, r, kl_mc, kl_ex) in enumerate(zip(
+        results["queries"],
+        results["responses"],
+        results["kl_mc_values"],
+        results["kl_exact_values"]
+    )):
+        report_lines.extend([
+            f"\n--- Sample {i+1} ---",
+            f"Query: {q[:200]}{'...' if len(q) > 200 else ''}",
+            f"Response: {r[:200]}{'...' if len(r) > 200 else ''}",
+            f"KL (MC): {kl_mc:.4f}, KL (Exact): {kl_ex:.4f}",
+        ])
+    
+    report_lines.extend([
+        "",
+        "=" * 70,
+        f"Results saved to: {run_dir}",
+        "=" * 70,
+    ])
+    
+    with open(os.path.join(run_dir, "report.txt"), "w") as f:
+        f.write("\n".join(report_lines))
+    
+    print(f"\nResults saved to: {run_dir}")
+    print(f"  - summary.json:        Summary statistics")
+    print(f"  - config.json:         Experiment configuration")
+    print(f"  - samples.json:        Per-sample results with queries/responses")
+    print(f"  - kl_mc_values.npy:    Raw MC KL values (numpy array)")
+    print(f"  - kl_exact_values.npy: Raw exact KL values (numpy array)")
+    print(f"  - report.txt:          Human-readable report")
+    
+    return run_dir
+
+
 # ============== Example usage with your Mistral models ==============
 
 if __name__ == "__main__":
@@ -203,6 +323,8 @@ if __name__ == "__main__":
     parser.add_argument("--max_new_tokens", type=int, default=128)
     parser.add_argument("--batch_size", type=int, default=2)
     parser.add_argument("--num_prompts", type=int, default=10, help="Number of prompts to use")
+    parser.add_argument("--temperature", type=float, default=1.0, help="Sampling temperature")
+    parser.add_argument("--output_dir", type=str, default="results", help="Directory to save results")
     args = parser.parse_args()
     
     # Check available GPUs
@@ -270,6 +392,7 @@ if __name__ == "__main__":
         ref_device=args.ref_device,
         max_new_tokens=args.max_new_tokens,
         batch_size=args.batch_size,
+        temperature=args.temperature,
     )
     
     print("\n" + "="*60)
@@ -290,3 +413,20 @@ if __name__ == "__main__":
         print(f"Query: {q[:100]}...")
         print(f"Response: {r[:100]}...")
         print(f"KL (MC): {kl_mc:.4f}, KL (Exact): {kl_ex:.4f}")
+    
+    # Save results
+    config = {
+        "model_name": args.model_name,
+        "adapter_name": args.adapter_name,
+        "policy_device": args.policy_device,
+        "ref_device": args.ref_device,
+        "max_new_tokens": args.max_new_tokens,
+        "batch_size": args.batch_size,
+        "num_prompts": args.num_prompts,
+        "temperature": args.temperature,
+        "prompts_used": sample_prompts,
+        "num_gpus": num_gpus,
+        "gpu_names": [torch.cuda.get_device_name(i) for i in range(num_gpus)],
+    }
+    
+    save_results(results, config, output_dir=args.output_dir)
