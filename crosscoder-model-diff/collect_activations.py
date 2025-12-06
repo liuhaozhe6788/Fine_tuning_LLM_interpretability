@@ -74,18 +74,26 @@ def collect_ft_model_acts_and_save_to_hf(all_text_data):
     print("Saved ft model acts to Hugging Face dataset")
     return scaling_factor
 
-def main():
+def main(model_type):
     all_text_data = prepare_text_data()
-    base_model_scaling_factor = collect_base_model_acts_and_save_to_hf(all_text_data)
-    # ft_model_scaling_factor = collect_ft_model_acts_and_save_to_hf(all_text_data)
-    scaling_factors = {
-        "base_model_scaling_factor": 27.489933013916016,
-        "ft_model_scaling_factor": 27.12582778930664,
-    }
+    if model_type == "base":
+        base_model_scaling_factor = collect_base_model_acts_and_save_to_hf(all_text_data)
+        scaling_factors = {
+            "base_model_scaling_factor": base_model_scaling_factor
+        }
+    elif model_type == "ft":
+        ft_model_scaling_factor = collect_ft_model_acts_and_save_to_hf(all_text_data)
+        scaling_factors = {
+            "ft_model_scaling_factor": ft_model_scaling_factor,
+        }
+    else:
+        raise ValueError(f"Invalid model type: {model_type}")
+
     # to hugging face dataset
-    with open("scaling_factors.json", "w") as f:
+    with open(f"scaling_factors_{model_type}.json", "w") as f:
         json.dump(scaling_factors, f)
 
 
 if __name__ == "__main__":
-    main()
+    model_type = "ft"
+    main(model_type)
