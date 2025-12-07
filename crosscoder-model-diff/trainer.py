@@ -6,12 +6,11 @@ from torch.nn.utils import clip_grad_norm_
 from datasets import Dataset
 from huggingface_hub import HfApi, login
 import os
+import wandb
 
 HF_TOKEN = os.environ.get("HF_TOKEN")
 login(token=os.getenv("HF_TOKEN"))
 
-# Change this to your desired repo name
-REPO_ID = "liuhaozhe6788/crosscoder-model-diff-mistral-7b-instruct-v0.3_finQA_lora"
 class Trainer:
     def __init__(self, cfg, base_model_acts: Dataset, ft_model_acts: Dataset):
         self.cfg = cfg
@@ -20,6 +19,10 @@ class Trainer:
         self.ft_model_acts = ft_model_acts
         self.total_steps = len(base_model_acts) // cfg["batch_size"]
         self.residual_batch_size = len(base_model_acts) % cfg["batch_size"]
+        self.batch_topk = cfg["batch_topk"]
+        self.repo_id = "liuhaozhe6788/crosscoder-model-diff-mistral-7b-instruct-v0.3_finQA_lora" # Change this to your desired repo name
+        if self.batch_topk is not None:
+            self.repo_id += f"_topk_{self.batch_topk}"
         self.optimizer = torch.optim.Adam(
             self.crosscoder.parameters(),
             lr=cfg["lr"],
@@ -141,7 +144,7 @@ class Trainer:
 
         api = HfApi()
 
-        repo_id = REPO_ID
+        repo_id = self.repo_id
         if not api.repo_exists(repo_id):
             api.create_repo(repo_id)
         api.upload_file(

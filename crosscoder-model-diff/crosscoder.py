@@ -92,6 +92,16 @@ class CrossCoder(nn.Module):
         x = x.to(self.dtype)
         acts = self.encode(x)
         # acts: [batch, d_hidden]
+        if self.cfg["batch_topk"] is not None:
+            # Get topk across the whole batch
+            acts_flat = acts.flatten()
+            _, topk_indices = torch.topk(acts_flat, k=self.cfg["batch_topk"] * acts.shape[0], dim=-1)
+            # Create a boolean mask from the indices
+            mask_flat = torch.zeros_like(acts_flat, dtype=torch.bool)
+            mask_flat[topk_indices] = True
+            mask = mask_flat.reshape_as(acts)
+            acts = torch.where(mask, acts, 0)
+
         x_reconstruct = self.decode(acts)
         diff = x_reconstruct.float() - x.float()
         squared_diff = diff.pow(2)

@@ -9,7 +9,7 @@ import os
 import einops
 import numpy as np
 import json
-# from train import cfg
+
 
 HF_TOKEN = os.environ.get("HF_TOKEN")
 login(HF_TOKEN)
