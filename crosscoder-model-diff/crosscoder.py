@@ -85,12 +85,10 @@ class CrossCoder(nn.Module):
     def forward(self, x):
         # x: [batch, n_models, d_model]
         acts = self.encode(x)
+        acts = self.mask_acts_batchtopk(acts)
         return self.decode(acts)
-
-    def get_losses(self, x):
-        # x: [batch, n_models, d_model]
-        x = x.to(self.dtype)
-        acts = self.encode(x)
+    
+    def mask_acts_batchtopk(self, acts):
         # acts: [batch, d_hidden]
         if self.cfg["batch_topk"] is not None:
             # Get topk across the whole batch
@@ -101,7 +99,13 @@ class CrossCoder(nn.Module):
             mask_flat[topk_indices] = True
             mask = mask_flat.reshape_as(acts)
             acts = torch.where(mask, acts, 0)
+        return acts
 
+    def get_losses(self, x):
+        # x: [batch, n_models, d_model]
+        x = x.to(self.dtype)
+        acts = self.encode(x)
+        acts = self.mask_acts_batchtopk(acts)
         x_reconstruct = self.decode(acts)
         diff = x_reconstruct.float() - x.float()
         squared_diff = diff.pow(2)
