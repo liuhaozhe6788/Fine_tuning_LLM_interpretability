@@ -61,51 +61,20 @@ For each training step:
 
 ## Implementation Options
 
-### Option 1: Pre-collected Activations (Current Implementation)
+### Pre-collected Activations (Current Implementation)
 - Load activations from HuggingFace datasets
 - Simpler, faster training (no model forward passes during training)
 - Requires pre-collection step
 - Good for large-scale training
 
-### Option 2: On-the-fly Activation Collection (Buffer-based)
-- Use Buffer class to collect activations during training
-- More memory efficient (streaming)
-- Slower (model forward passes during training)
-- Good for experimentation or when storage is limited
-
-## Checkpointing
-
-### Save Format
-- Model state dict
-- Optimizer state dict
-- Scheduler state dict
-- Config JSON
-
-### Checkpoint Structure
-```
-checkpoints/
-  version_{N}/
-    {step}.pt                    # Model + optimizer + scheduler states
-    {step}_cfg.json              # Config at checkpoint
-```
-
-### Best Practices
-- Save at regular intervals (`save_every`)
-- Save final checkpoint at end of training
-- Keep multiple checkpoints for analysis
-- Save config with each checkpoint for reproducibility
-
+### Crosscoder model selection:
+- vanilla crosscoder
+- crosscoder with batch topk activation masking
+- add auxillary loss
 ## Validation/Evaluation
 
 ### During Training
 - Monitor explained variance (should increase)
 - Monitor L0 loss (should decrease, indicating sparsity)
 - Monitor reconstruction loss (should decrease)
-
-## Next Steps After Training
-
-1. **Analysis**: Analyze learned features and their interpretability
-2. **Visualization**: Create visualizations of shared latent space
-3. **Downstream tasks**: Use CrossCoder for mechanistic interpretability
-4. **Publishing**: Upload to HuggingFace if results are good
 

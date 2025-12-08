@@ -71,6 +71,7 @@ class CrossCoder(nn.Module):
             acts = F.relu(x_enc + self.b_enc)
         else:
             acts = x_enc + self.b_enc
+        acts = self.mask_acts_batchtopk(acts)
         return acts
 
     def decode(self, acts):
@@ -85,7 +86,6 @@ class CrossCoder(nn.Module):
     def forward(self, x):
         # x: [batch, n_models, d_model]
         acts = self.encode(x)
-        acts = self.mask_acts_batchtopk(acts)
         return self.decode(acts)
     
     def mask_acts_batchtopk(self, acts):
@@ -105,7 +105,6 @@ class CrossCoder(nn.Module):
         # x: [batch, n_models, d_model]
         x = x.to(self.dtype)
         acts = self.encode(x)
-        acts = self.mask_acts_batchtopk(acts)
         x_reconstruct = self.decode(acts)
         diff = x_reconstruct.float() - x.float()
         squared_diff = diff.pow(2)
