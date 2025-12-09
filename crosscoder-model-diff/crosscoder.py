@@ -71,7 +71,8 @@ class CrossCoder(nn.Module):
             acts = F.relu(x_enc + self.b_enc)
         else:
             acts = x_enc + self.b_enc
-        acts = self.mask_acts_batchtopk(acts)
+        if self.cfg["batch_topk"] is not None:
+            acts = self.mask_acts_batchtopk(acts)
         return acts
 
     def decode(self, acts):
@@ -90,15 +91,14 @@ class CrossCoder(nn.Module):
     
     def mask_acts_batchtopk(self, acts):
         # acts: [batch, d_hidden]
-        if self.cfg["batch_topk"] is not None:
-            # Get topk across the whole batch
-            acts_flat = acts.flatten()
-            _, topk_indices = torch.topk(acts_flat, k=self.cfg["batch_topk"] * acts.shape[0], dim=-1)
-            # Create a boolean mask from the indices
-            mask_flat = torch.zeros_like(acts_flat, dtype=torch.bool)
-            mask_flat[topk_indices] = True
-            mask = mask_flat.reshape_as(acts)
-            acts = torch.where(mask, acts, 0)
+        # Get topk across the whole batch
+        acts_flat = acts.flatten()
+        _, topk_indices = torch.topk(acts_flat, k=self.cfg["batch_topk"] * acts.shape[0], dim=-1)
+        # Create a boolean mask from the indices
+        mask_flat = torch.zeros_like(acts_flat, dtype=torch.bool)
+        mask_flat[topk_indices] = True
+        mask = mask_flat.reshape_as(acts)
+        acts = torch.where(mask, acts, 0)
         return acts
 
     def get_losses(self, x):
