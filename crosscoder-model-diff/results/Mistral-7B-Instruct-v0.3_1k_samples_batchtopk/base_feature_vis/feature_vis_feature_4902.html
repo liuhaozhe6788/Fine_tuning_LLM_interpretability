@@ -1,0 +1,898 @@
+
+<div id='dropdown-container'></div>
+        
+<div class='grid-container'>
+        <div id='column-0' class="grid-column" style='max-height: 750px; '>
+        <!-- Activation densities histogram -->
+        <div class="plotly-hist" id="histogram-acts-0" style="height: 150px; margin-top: 0px;"></div>
+        <!-- Logits table for Model A -->
+        <div class="logits-table" id="logits-table-0"></div><!-- Logits table for Model B -->
+        <div class="logits-table" id="logits-table-B-0"></div><!-- Feature Info Tables -->
+        <div class="feature-tables" id="feature-tables-0"></div></div>
+    
+    <div id='column-1-0' class="grid-column" style='max-height: 750px; '>
+        <!-- Sequence group -->
+        <div class="seq-group" id="seq-group-1-0"></div></div>
+    
+    <div id='column-1-3' class="grid-column" style='max-height: 750px; '>
+        <!-- Sequence group -->
+        <div class="seq-group" id="seq-group-1-8"></div>
+        <!-- Sequence group -->
+        <div class="seq-group" id="seq-group-1-9"></div></div>
+    
+    <div id='column-1-4' class="grid-column" style='max-height: 750px; '>
+        <!-- Sequence group -->
+        <div class="seq-group" id="seq-group-1-10"></div></div>
+</div>
+
+<style>
+/* Styling of the dropdowns */
+select {
+    appearance: none;
+    border: 0;
+    flex: 1;
+    padding: 0 1em;
+    background-color: #eee;
+    cursor: pointer;
+}
+.select {
+    box-shadow: 0 5px 5px rgba(0, 0, 0, 0.25);
+    cursor: pointer;
+    display: flex;
+    width: 100px;
+    height: 25px;
+    border-radius: .25em;
+    overflow: hidden;
+    position: relative;
+    margin-right: 15px;
+}
+.select::after {
+    position: absolute;
+    content: '\25BC';
+    font-size: 9px;
+    top: 0;
+    right: 0;
+    padding: 1em;
+    background-color: #ddd;
+    transition: .25s all ease;
+    pointer-events: none;
+}
+.select:hover::after {
+    color: black;
+}
+#dropdown-container {
+    margin-left: 10px;
+    margin-top: 20px;
+    display: flex;
+    flex-wrap: wrap;
+}
+/* Styling of the top-level container */
+.grid-container {
+    font-family: 'system-ui';
+    border: 1px solid #e6e6e6;
+    background-color: #fff;
+    margin: 30px 10px;
+    box-shadow: 0 5px 5px rgba(0, 0, 0, 0.25);
+    display: grid;
+    justify-content: start;
+    grid-template-columns: auto;
+    overflow-x: auto;
+    overflow-y: visible;
+    grid-auto-flow: column;
+    white-space: nowrap;
+    padding-bottom: 12px;
+    padding-top: 35px;
+    padding-left: 20px;
+}
+/* Styling each grid column (note, the max-height controls height of grid-container) */
+.grid-column {
+    margin-left: 20px;
+    padding-right: 20px;
+    width: max-content;
+    overflow-y: auto;
+    max-height: 750px;
+}
+/* Styling the scrollbars */
+::-webkit-scrollbar {
+    height: 10px;
+    width: 10px;
+}
+::-webkit-scrollbar-track {
+    background: #f1f1f1;
+}
+::-webkit-scrollbar-thumb {
+    background: #999;
+}
+::-webkit-scrollbar-thumb:hover {
+    background: #555;
+}
+/* Margin at the bottom of each histogram */
+.plotly-hist {
+    margin-bottom: 25px;
+}
+/* Margins below the titles (most subtitles are h4, except for the prompt-centric view which has h2 titles) */
+h4 {
+    margin-top: 0px;
+    margin-bottom: 10px;
+}
+/* Some space below the <hr> line in prompt-centric vis */
+hr {
+    margin-bottom: 35px;
+}
+/* Default font & appearance for the words in the sequence, before being hovered over */
+code {
+    font-family: Consolas, Menlo, Monaco;
+}
+/* Margin at the bottom of every sequence group, plus handle how overflow works (maybe not necessary) */
+.seq-group {
+    overflow-x: auto;
+    overflow-y: visible;
+    padding-top: 5px;
+    padding-bottom: 10px;
+    margin-bottom: 10px;
+}
+/* Margin between single sequences */
+.seq {
+    margin-bottom: 11px;
+}
+/* Styling for each token in a sequence */
+.token {
+    font-family: Consolas, Menlo, Monaco;
+    font-size: 0.9em;
+    border-top-left-radius: 3px;
+    border-top-right-radius: 3px;
+    padding: 1px;
+    color: black;
+    display: inline;
+    white-space: pre-wrap;
+}
+/* All the messy hovering stuff! */
+.hover-text {
+    position: relative;
+    cursor: pointer;
+    display: inline-block; /* Needed to contain the tooltip */
+    box-sizing: border-box;
+}
+.tooltip {
+    background-color: #fff;
+    color: #333;
+    text-align: center;
+    border-radius: 10px;
+    padding: 5px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.25);
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    font-family: 'system-ui';
+    font-size: 1.1em;
+    display: none;
+    position: fixed;
+    z-index: 1000;
+}
+.token:hover {
+    border-top: 3px solid black;
+}
+.tooltip-container {
+    position: absolute;
+    pointer-events: none;
+}
+.hover-text:hover + .tooltip-container .tooltip {
+    display: block;
+}
+
+
+table {
+    border: unset;
+    color: black;
+    border-collapse: collapse;
+    width: -moz-fit-content;
+    width: -webkit-fit-content;
+    width: fit-content;
+    margin-left: auto;
+    margin-right: auto;
+    font-size: 0.8em;
+}
+table.table-left tr {
+    border-bottom: 1px solid #eee;
+    padding: 15px;
+}
+table.table-left td {
+    padding: 3px 4px;
+}
+table.table-left {
+    width: 100%;
+}
+table.table-left td.left-aligned {
+    max-width: 120px;
+    overflow-x: hidden;
+}
+td {
+    border: none;
+    padding: 2px 4px;
+    white-space: nowrap;
+}
+.right-aligned {
+    text-align: right;
+}
+.left-aligned {
+    text-align: left;
+}
+.center-aligned {
+    text-align: center;
+    padding-bottom: 8px;
+}
+table code {
+    background-color: #ddd;
+    padding: 2px;
+    border-radius: 3px;
+}
+.table-container {
+    width: 100%;
+}
+.half-width-container {
+    display: flex;
+}
+.half-width {
+    width: 50%;
+    margin-right: -4px;
+}
+
+/* Feature tables should have space below them, also they should have a min column width */
+div.feature-tables table {
+    margin-bottom: 25px;
+    min-width: 250px;
+}
+/* Configure logits table container (i.e. the thing containing the smaller and larger tables) */
+div.logits-table {
+    min-width: 375px;
+    display: flex;
+    overflow-x: hidden;
+    margin-bottom: 20px;
+}
+/* Code is always bold in this table (this is just the neg/pos string tokens) */
+div.logits-table code {
+    font-weight: bold;
+}
+/* Set width of the tables inside the container (so they can stack horizontally), also put a gap between them */
+div.logits-table > div.positive {
+    width: 47%;
+}
+div.logits-table > div.negative {
+    width: 47%;
+    margin-right: 5%;
+}
+
+
+</style>
+
+<script src="https://d3js.org/d3.v6.min.js"></script>
+<script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+
+<script>
+
+document.addEventListener("DOMContentLoaded", function(event) {
+    const ALL_DATA = defineData();
+    setupPage(ALL_DATA['DASHBOARD_DATA'], ALL_DATA['AGGDATA']);
+});
+
+function setupPage(DASHBOARD_DATA, AGGDATA) {
+    // Dynamically creates dropdowns from the data (by parsing its keys), and causes `createVis` to be called whenever
+    // the dropdowns change. This includes the initial call to `createVis` with the first key, which is START_KEY.
+
+    const START_KEY = "4902";
+        // The start key has already been user-defined, we need to check it's present in DASHBOARD_DATA
+    if (!Object.keys(DASHBOARD_DATA).includes(START_KEY)) {
+        console.error(`No data available for key: ${START_KEY}`);
+    }
+    const startParts = START_KEY.split('|');
+    
+    // Function which will measure the width of a key (used for dynamically setting the width of our dropdowns)
+    function measureTextWidth(text, font) {
+        // Create a temporary span element
+        const span = document.createElement("span");
+        span.style.visibility = "hidden"; // Make sure it's not visible
+        span.style.position = "absolute"; // Take it out of document flow
+        span.style.font = font; // Apply font styling similar to the select options
+        span.textContent = text;
+        document.body.appendChild(span);
+        const width = span.offsetWidth; // Get the width of the span
+        document.body.removeChild(span); // Remove the span from the body
+        return width;
+    }
+    
+    // Check if there's only one key, in which case we have no selection to make
+    if (Object.keys(DASHBOARD_DATA).length === 1) {
+    
+        const onlyKey = Object.keys(DASHBOARD_DATA)[0];
+        createVis(DASHBOARD_DATA[onlyKey]);
+    
+    } else {
+    
+        // Assuming `DASHBOARD_DATA` is available and d3 has been included
+        const parsedKeys = Object.keys(DASHBOARD_DATA).map(key => key.split("|"));
+    
+        // Determine `n` - the number of dropdowns needed
+        const n = parsedKeys[0].length;
+    
+        // Create a structure to store options for each dropdown
+        const options = Array.from({ length: n }, () => new Set());
+    
+        // Populate options for each dropdown
+        parsedKeys.forEach(parts => {
+            parts.forEach((part, index) => options[index].add(part));
+        });
+    
+        // Select the container for the dropdowns
+        const container = d3.select('#dropdown-container');
+    
+        // Create the dropdowns
+        options.forEach((opts, i) => {
+            // We wrap each `select` element in a `.select` div, for styling reasons)
+            const selectDiv = container.append('div').attr('class', 'select');
+            const selectElem = selectDiv.append('select').attr('id', `select-${i}`);
+            let maxWidth = 0;
+    
+            // Set the title of this dropdown
+            
+    
+            opts.forEach(opt => {
+                // Add this as an option
+                const optionElem = selectElem.append('option').text(opt).attr('value', opt);
+    
+                // If it matches the start key, set it to true
+                if (startParts[i] === opt) {
+                    optionElem.attr('selected', true);
+                }
+    
+                // Calculate the width of this option, and possibly update the max width (for the select div)
+                const width = measureTextWidth(opt, "1em system-ui");
+                if (width > maxWidth) {
+                    maxWidth = width;
+                }
+            });
+    
+            // Set the width of the select div to the max width + 45px (for the dropdown arrow)
+            selectDiv.style('width', `${maxWidth + 45}px`);
+    
+            // Add event listener to update the visualization (and the selection options) when the dropdown changes
+            selectElem.on('change', function() {
+                updateDropdowns();
+            });
+        });
+    
+        // This gets called every time the dropdowns are updated
+        function updateDropdowns() {
+    
+            // Empty all grid-column elements
+            d3.selectAll(".grid-column").each(function() {
+                d3.select(this).selectAll("*").html(""); 
+            });
+    
+            // Get the current value of each dropdown
+            const currentSelections = options.map((_, i) => d3.select(`#select-${i}`).property('value'));
+    
+            // Disable options that are not available based on the current selections
+            options.forEach((opts, i) => {
+                const select = d3.select(`#select-${i}`);
+                select.selectAll('option').each(function() {
+                    const optionValue = d3.select(this).attr('value');
+                    const potentialKey = [...currentSelections.slice(0, i), optionValue, ...currentSelections.slice(i + 1)].join('|');
+                    d3.select(this).attr('disabled', !DASHBOARD_DATA.hasOwnProperty(potentialKey) ? true : null);
+                });
+            });
+    
+            // Parse these options into the key for our DASHBOARD_DATA object
+            const selectedKey = currentSelections.join('|');
+    
+            // Create vis using that data
+            createVis(DASHBOARD_DATA[selectedKey]);
+        }
+    
+        // Initial trigger
+        updateDropdowns();
+    }
+}
+
+function createVis(DATA) {
+    // Create the vis from the data (this is where all the JavaScript files in this repo get dumped into). The DATA
+    // object here will be DASHBOARD_DATA["8"] in the feature-centric vis, or DASHBOARD_DATA["act_quantile|'first' (6)"]
+    // in the prompt-centric vis).
+
+        // ! Using `DATA.actsHistogramData` to fill in the activations histogram
+    
+    function createActsLine(color, width, height) {
+        return {
+            type: 'line', line: {color: color, width: width},
+            x0: 0, x1: 0, xref: 'x',
+            y0: 0, y1: height, yref: 'paper',
+            visible: false,
+        }
+    }
+    
+    function createActsAnnotation() {
+        return {
+            text: '', showarrow: false,
+            x: 0, xref: 'x', 
+            y: 0.9, yref: 'paper',
+            xshift: 3, align: 'left', xanchor: 'left',
+            visible: false,
+        }
+    }
+    
+    function setupActsHistogram(histId, histData) {
+    
+        // Create layout. This has 2 lines with annotations, both initially set to invisible (first is for dynamic on-hover
+        // and second is for static, for the prompt-centric vis). We need to define them both so that when JavaScript alters
+        // 'shapes[0]' or 'shapes[1]' we get no error
+        var layout = {
+            paper_bgcolor: 'white',
+            plot_bgcolor: 'white',
+            xaxis: {
+                gridcolor: '#eee',
+                zerolinecolor: '#eee',
+                tickvals: histData.ticks,
+                range: [0, 1.2 * Math.max(...histData.x)],
+            },
+            yaxis: {gridcolor: '#eee', zerolinecolor: '#eee'},
+            barmode: 'relative',
+            bargap: 0.01,
+            showlegend: false,
+            margin: {l: 50, r: 25, b: 25, t: 25, pad: 4},
+            paper_bgcolor: 'rgba(0,0,0,0)',
+            plot_bgcolor: 'rgba(0,0,0,0)',
+            responsive: true,
+            shapes: [createActsLine('black', 2, 1.0), createActsLine('black', 1, 0.9)],
+            annotations: [createActsAnnotation(), createActsAnnotation()],
+        };
+    
+        // Create traces (this is simple)
+        var traces = [{
+            x: histData.x,
+            y: histData.y,
+            type: 'bar',
+            marker: {color: histData.colors},
+        }];
+    
+        // Plot the histogram
+        Plotly.newPlot(histId, traces, layout, {responsive: true, displayModeBar: false});
+    
+        // Maybe add title (if the title already existed then we update it, otherwise we create a new one)
+        if(histData.title) {
+            var histogramElement = document.getElementById(histId);
+            var existingTitleElement = histogramElement.previousSibling;
+            if (existingTitleElement && existingTitleElement.tagName === 'H4') {
+                existingTitleElement.innerHTML = histData.title;
+            } else {
+                var titleElement = document.createElement('h4');
+                titleElement.innerHTML = histData.title;
+                histogramElement.parentNode.insertBefore(titleElement, histogramElement);
+            }
+        }
+    }
+    
+    // 'actsHistogramData' is a dictionary mapping suffixes to histogram data (to make each histogram unique)
+    // We iterate over it, and create a histogram for each one
+    Object.entries(DATA.actsHistogramData).forEach(([suffix, histData]) => {
+        var t0 = performance.now();
+    
+        histId = `histogram-acts-${suffix}`;
+        setupActsHistogram(histId, histData);
+    
+        var t1 = performance.now();
+        console.log(`HTML for ${histId} generated in ${(t1 - t0).toFixed(1)} ms`);
+    });
+    
+    
+    
+    
+    // ! Using `DATA.logitsATableData` to fill in Model A pos/neg logit tables
+    function setupLogitTablesA(logitsTableId, tablesData, tableMetaData) {
+        // Fetch table data
+        const tableData = tablesData[tableMetaData.dataKey];
+    
+        // Select the table container by its ID
+        const tablesContainer = d3.select(`#${logitsTableId}`);
+    
+        // Select or create table container
+        const tableId = `${tableMetaData.class}-${logitsTableId}`;
+        const tableContainer = tablesContainer.select(`#${tableId}`);
+        
+        // If this table container doesn't exist, create it
+        if (tableContainer.empty()) {
+            const section = tablesContainer.append("div").attr("class", tableMetaData.class);
+            section.append("h4").html(tableMetaData.title);
+            section.append("table").attr("id", tableId).attr("class", "table-left");
+        }
+    
+        // Get table, clear it, and add new data
+        const table = tablesContainer.select(`#${tableId}`);
+        table.selectAll('tr').remove();
+    
+        // Bind logits data to rows
+        const rows = table.selectAll('tr')
+            .data(tableData)
+            .enter()
+            .append('tr');
+        
+        // Append token cell
+        rows.append('td')
+            .attr('class', 'left-aligned')
+            .append('code')
+            .style('background-color', d => d.color)
+            .text(d => d.symbol);
+        
+        // Append value cell
+        rows.append('td')
+            .attr('class', 'right-aligned')
+            .text(d => d.value.toFixed(2));
+    }
+    
+    // Define metadata for Model A tables
+    const logitTablesMetaDataA = [
+        {title: "BASE NEGATIVE LOGITS", dataKey: "negLogits", class: "negative"},
+        {title: "BASE POSITIVE LOGITS", dataKey: "posLogits", class: "positive"},
+    ];
+    
+    // Create Model A tables
+    Object.entries(DATA.logitsATableData).forEach(([suffix, tablesData]) => {
+        const logitsTableId = `logits-table-${suffix}`;
+        logitTablesMetaDataA.forEach(tableMetaData => {
+            setupLogitTablesA(logitsTableId, tablesData, tableMetaData);
+        });
+    });
+    // ! Using `DATA.logitsBTableData` to fill in Model B pos/neg logit tables
+    function setupLogitTablesB(logitsTableId, tablesData, tableMetaData) {
+        // Fetch table data
+        const tableData = tablesData[tableMetaData.dataKey];
+    
+        // Select the table container by its ID
+        const tablesContainer = d3.select(`#${logitsTableId}`);
+    
+        // Select or create table container
+        const tableId = `${tableMetaData.class}-${logitsTableId}`;
+        const tableContainer = tablesContainer.select(`#${tableId}`);
+        
+        // If this table container doesn't exist, create it
+        if (tableContainer.empty()) {
+            const section = tablesContainer.append("div").attr("class", tableMetaData.class);
+            section.append("h4").html(tableMetaData.title);
+            section.append("table").attr("id", tableId).attr("class", "table-left");
+        }
+    
+        // Get table, clear it, and add new data
+        const table = tablesContainer.select(`#${tableId}`);
+        table.selectAll('tr').remove();
+    
+        // Bind logits data to rows
+        const rows = table.selectAll('tr')
+            .data(tableData)
+            .enter()
+            .append('tr');
+        
+        // Append token cell
+        rows.append('td')
+            .attr('class', 'left-aligned')
+            .append('code')
+            .style('background-color', d => d.color)
+            .text(d => d.symbol);
+        
+        // Append value cell
+        rows.append('td')
+            .attr('class', 'right-aligned')
+            .text(d => d.value.toFixed(2));
+    }
+    
+    // Define metadata for Model B tables
+    const logitTablesMetaDataB = [
+        {title: "FINETUNED NEGATIVE LOGITS", dataKey: "negLogits", class: "negative"},
+        {title: "FINETUNED POSITIVE LOGITS", dataKey: "posLogits", class: "positive"},
+    ];
+    
+    // Create Model B tables
+    Object.entries(DATA.logitsBTableData).forEach(([suffix, tablesData]) => {
+        const logitsTableId = `logits-table-B-${suffix}`;  // Note the -B- in the ID
+        logitTablesMetaDataB.forEach(tableMetaData => {
+            setupLogitTablesB(logitsTableId, tablesData, tableMetaData);
+        });
+    });
+    // ! Using `DATA.featureTablesData` to create & fill in the feature tables
+    
+    function setupFeatureTables(tablesContainerId, tablesData, tableMetaData) {
+        
+        // Fetch table data (singular), if it doesn't exist then return early
+        const tableData = tablesData[tableMetaData.dataKey] || null;
+        if (tableData === null) {
+            return;
+        }
+    
+        // Get table container from its ID
+        const featureTablesDiv = d3.select(`#${tablesContainerId}`);
+    
+        // Add a div to hold the header and table, give it a unique ID, and empty it (if that div already existed)
+        const tableContainerId = `${tableMetaData.dataKey}-${tablesContainerId}`;
+        const tableContainer = featureTablesDiv.append("div").attr("id", tableContainerId);
+        tableContainer.selectAll("*").remove();
+    
+        // Add the title
+        tableContainer.append("h4").html(tableMetaData.title);
+    
+        // Create the table, and header / body
+        const table = tableContainer.append("table").attr("class", "table-left");
+        const thead = table.append("thead");
+        const tbody = table.append("tbody");
+        const headerRow = thead.append("tr");
+    
+        // Append the 3 columns to this table's header row
+        tableMetaData.columns.forEach(col => {
+            headerRow.append("td")
+            .attr("class", col === "Index" ? "left-aligned" : "right-aligned")
+            .html(col);
+        });
+    
+        // Append our data to the tbody
+        const rows = tbody.selectAll('tr')
+            .data(tableData)
+            .enter()
+            .append('tr');
+    
+        rows.selectAll('td')
+            .data(row => Object.values(row))
+            .enter()
+            .append('td')
+            .attr('class', (d, i) => i === 0 ? 'left-aligned' : 'right-aligned')
+            .html(d => d);
+    }
+        
+    // Define some data which will tell us how to create our tables (this isn't a function of data, it's always the same)
+    const featureTablesMetaData = [
+        {title: "NEURON ALIGNMENT", columns: ["Index", "Value", "% of L<sub>1</sub>"], dataKey: "neuronAlignment"},
+        {title: "RELATIVE DECODER STRENGTH", columns: ["Model", "Value"], dataKey: "relativeDecoderStrength"},
+        {title: "DECODER COSINE SIM BETWEEN MODELS", columns: ["Value"], dataKey: "decoderCosineSim"},
+        {title: "CORRELATED NEURONS", columns: ["Index", "Pearson Corr.", "Cosine Sim."], dataKey: "correlatedNeurons"},
+        {title: "CORRELATED FEATURES", columns: ["Index", "Pearson Corr.", "Cosine Sim."], dataKey: "correlatedFeatures"},
+        {title: "CORRELATED FEATURES (B-ENCODER)", columns: ["Index", "Pearson Corr.", "Cosine Sim."], dataKey: "correlatedFeaturesB"},
+    ]
+    
+    // 'featureTablesData' is a dictionary mapping suffixes to feature tables data (to make each table unique)
+    // We iterate over it, and create a table for each one
+    Object.entries(DATA.featureTablesData).forEach(([suffix, tablesData]) => {
+        var t0 = performance.now();
+    
+        // For each set of tables, we need to empty it, then create each of the new tables (up to 3)
+        tablesContainerId = `feature-tables-${suffix}`;
+        featureTablesMetaData.forEach(tableMetaData => {
+            setupFeatureTables(tablesContainerId, tablesData, tableMetaData);
+        });
+        
+        var t1 = performance.now();
+        console.log(`HTML for ${tablesContainerId} generated in ${(t1 - t0).toFixed(1)} ms`);
+    });
+    
+    
+    
+    
+    function addLineHistogram(histogramID, shapeIndex, tok, xValue) {
+        // Updates histogram with a line (if the histogram exists)
+        // shapeIndex 0 is for on-hover, 1 is for permanent line
+        if (document.getElementById(histogramID)) {
+            Plotly.relayout(histogramID, {
+                [`shapes[${shapeIndex}].x0`]: xValue,
+                [`shapes[${shapeIndex}].x1`]: xValue,
+                [`shapes[${shapeIndex}].visible`]: true,
+                [`annotations[${shapeIndex}].x`]: xValue,
+                [`annotations[${shapeIndex}].text`]: `|${tok}|<br>${xValue.toFixed(3)}`,
+                [`annotations[${shapeIndex}].visible`]: true,
+            });
+        }
+    }
+    
+    function removeLineHistogram(histogramID, shapeIndex) {
+        if (document.getElementById(histogramID)) {
+            Plotly.relayout(histogramID, {
+                [`shapes[${shapeIndex}].visible`]: false,
+                [`annotations[${shapeIndex}].visible`]: false,
+            });
+        }
+    }
+    
+    function generateTokHtmlElement(
+        parent, tok, tokID, uColor, bgColor, isBold, featAct, tokenLogit, lossEffect, posToks, posVal, negToks, negVal, permanentLine, hide, idSuffix,
+    ) {
+        // Figure out if previous token was active (this affects the construction of the tooltip)
+        let prevTokenActive = posToks.length + negToks.length > 0;
+    
+        // Create the token span (this will contain just the token, not the hoverdata)
+        let tokenSpan = parent.append("span")
+            .attr("class", "hover-text");
+    
+        // Get the histogram ids
+        let histogramActsID = `histogram-acts-${idSuffix}`;
+        let histogramLogitsID = `histogram-logits-${idSuffix}`;
+    
+        // Put actual token in the tokenSpan object (i.e. the thing we see without hovering)    
+        tokenSpan.append("span")
+            .attr("class", "token")
+            .style("background-color", bgColor)
+            .style("border-bottom", `4px solid ${uColor}`)
+            .style("font-weight", isBold ? "bold" : "normal")
+            .text(tok);
+    
+        // If hide is true, then we just show a box saying "no information was calculated for this token"
+        if (hide) {
+            // First define the tooltip div (added to the parent element, i.e. it's a sibling of the token span)
+            let tooltipHeight = 70;
+            let tooltipWidth = 150;
+            let tooltipDiv = parent.append("div")
+                .attr("class", "tooltip")
+                .style("height", tooltipHeight + "px")
+                .style("width", tooltipWidth + "px")
+                .style("font-size", "0.85em")
+                .style("white-space", "pre-wrap")
+                .style("align-items", "center")
+                .style("text-align", "center")
+                .style("padding", "15px")
+                .html("No information was calculated for this token, since you used compute_buffer=False.");
+    
+            // Add dynamic behaviour: show the tooltip on hover, and also add lines to the two histograms
+            tokenSpan.on('mouseover', function() {
+                tooltipDiv.style('display', 'flex');
+                tooltipDiv.style('position', 'fixed');
+            })
+            tokenSpan.on('mousemove', function(event) {
+                tooltipDiv.style('left', `${event.clientX - tooltipWidth / 2}px`);
+                tooltipDiv.style('top', `${event.clientY + 20}px`);
+            });
+            tokenSpan.on('mouseout', function() {
+                tooltipDiv.style('display', 'none');
+            });
+            
+        // If we're not hiding (because we only generated data for the bolded tokens), then create tooltip & add it on hover
+        } else { 
+    
+            // First define the tooltip div (added to the parent element, i.e. it's a sibling of the token span)
+            let tooltipHeight = prevTokenActive ? 270 : 160;
+            let tooltipWidth = prevTokenActive ? 350 : 250;
+            let tooltipDiv = parent.append("div")
+                .attr("class", "tooltip")
+                .style("height", tooltipHeight + "px")
+                .style("width", tooltipWidth + "px")
+                .style("align-items", "center")
+                .style("text-align", "center");
+    
+            // Next, create a table container, to contain 2 tables: one with basics (acts & loss effect), one with per-token logits
+            let tableContainer = tooltipDiv.append("div").attr("class", "table-container");
+    
+            // Creat the first table
+            let tokRow = `<td class="right-aligned">Token</td><td class="left-aligned"><code>${tok}</code> (${tokID})</td>`;
+            let featActRow = `<td class="right-aligned">Feature activation</td><td class="left-aligned">${featAct >= 0 ? '+' : ''}${featAct.toFixed(3)}</td>`;
+            let lossRow = `<td class="right-aligned">Loss contribution</td><td class="left-aligned">${lossEffect >= 0 ? '+' : ''}${lossEffect.toFixed(3)}</td>`;
+            let firstTable = tableContainer.append("table");
+            firstTable.append("tr").html(tokRow);
+            firstTable.append("tr").html(featActRow);
+            firstTable.append("tr").html(lossRow);
+            tableContainer.append("br");
+            
+            // If previous token is active, we add logit table
+            if (prevTokenActive) {
+                
+                // Create container for top & bottom logits tables
+                let logitsTableContainer = tableContainer.append("div").attr("class", "half-width-container")
+    
+                // Create the positive table, and fill it with values
+                let posLogitsTable = logitsTableContainer.append("table").attr("class", "half-width")
+                posLogitsTable.append("tr").html(`<td class="center-aligned" colspan="2">Pos logit contributions</td>`);
+                posToks.forEach((tok, index) => {
+                    posLogitsTable.append("tr").html(`
+                        <td class="right-aligned"><code>${tok}</code></td>
+                        <td class="left-aligned">${posVal[index] > 0 ? '+' : ''}${posVal[index].toFixed(3)}</td>
+                    `);
+                });
+    
+                // Create the negative table, and fill it with values
+                let negLogitsTable = logitsTableContainer.append("table").attr("class", "half-width")
+                negLogitsTable.append("tr").html(`<td class="center-aligned" colspan="2">Neg logit contributions</td>`);
+                negToks.forEach((tok, index) => {
+                    negLogitsTable.append("tr").html(`
+                        <td class="right-aligned"><code>${tok}</code></td>
+                        <td class="left-aligned">${negVal[index] > 0 ? '+' : ''}${negVal[index].toFixed(3)}</td>
+                    `);
+                });
+    
+            // If previous token is not active, we add a message instead
+            } else {
+                tableContainer.append("div")
+                    .style("font-size", "0.85em")
+                    .html("Feature not active on prev token;<br>no predictions were affected.");
+            }
+    
+            // Add dynamic behaviour: show the tooltip on hover, and also add lines to the two histograms
+            tokenSpan.on('mouseover', function() {
+                tooltipDiv.style('display', 'flex');
+                tooltipDiv.style('position', 'fixed');
+                addLineHistogram(histogramActsID, 0, tok, featAct);
+                addLineHistogram(histogramLogitsID, 0, tok, tokenLogit);
+            })
+            tokenSpan.on('mousemove', function(event) {
+                tooltipDiv.style('left', `${event.clientX - tooltipWidth / 2}px`);
+                tooltipDiv.style('top', `${event.clientY + 20}px`);
+            });
+            tokenSpan.on('mouseout', function() {
+                tooltipDiv.style('display', 'none');
+                removeLineHistogram(histogramActsID, 0);
+                removeLineHistogram(histogramLogitsID, 0);
+            });
+    
+            // Add static behaviour: if required, then show the permanent line on the histograms, as shapes[1]
+            if (permanentLine & isBold) {
+                addLineHistogram(histogramActsID, 1, tok, featAct);
+                addLineHistogram(histogramLogitsID, 1, tok, tokenLogit);
+            }
+        }
+    }
+    
+    Object.entries(DATA.tokenData).forEach(([seqGroupID, seqGroupData]) => {
+        const t0 = performance.now();
+    
+        // Find the sequence group container (this is the only thing that already exists)
+        const seqGroupContainer = d3.select(`#${seqGroupID}`);
+    
+        // Empty this container of title & all sequences
+        seqGroupContainer.selectAll('*').remove();
+    
+        // If title exists, add the title to this sequence group (we need .html not .text, because it could have <br>)
+        if ("title" in seqGroupData) {
+            seqGroupContainer.append('h4').html(seqGroupData.title);
+        }
+    
+        // Get the ID suffix for this sequence group
+        const idSuffix = seqGroupData.idSuffix;
+    
+        // Select all sequences (initially empty), and then add our sequences & bind them to the elems in seqGroupData.data
+        const seqGroup = seqGroupContainer.selectAll('.seq')
+            .data(seqGroupData.data)
+            .enter()
+            .append('div')
+            .attr('class', 'seq');
+    
+        // For each sequence, we iterate over & add all its tokens
+        seqGroup.each(function(seqData) {
+    
+            // Get `seq`, which is the individual `seq` element in seqGroup (i.e. the sequence container)
+            const seq = d3.select(this);
+    
+            // Iterate through each token data dict in `seqData`, and add this token to the sequence
+            seqData.forEach(tokData => {
+    
+                generateTokHtmlElement(
+                    seq,                                // object we'll append the token to
+                    tokData.tok,                        // string token
+                    tokData.tokID,                      // token ID (shown on hover, after PR request)
+                    tokData["uColor"] || "#fff",        // underline color (derived from loss effect)
+                    tokData["bgColor"] || "#fff",       // background color (derived from feature activation)
+                    tokData["isBold"] || false,         // is this token bolded?
+                    tokData["featAct"] || 0.0,          // feature activation at this token (used for acts histogram line)
+                    tokData["tokenLogit"] || 0.0,       // raw logit effect on this token (used for logits histogram line)
+                    tokData["lossEffect"] || 0.0,       // effect on loss (used for histogram line), if prev token active
+                    tokData["posToks"] || [],           // most-positive tokens (strings)
+                    tokData["posVal"] || [],            // most-positive token values
+                    tokData["negToks"] || [],           // most-negative tokens (strings)
+                    tokData["negVal"] || [],            // most-negative token values
+                    tokData["permanentLine"] || false,  // do we show a permanent line on histogram?
+                    tokData["hide"] || false,           // do we suppress hoverdata for this token?
+                    idSuffix,                           // suffix for the histogram ID which the hoverline will be added to
+                );
+            });
+        });
+    
+        const t1 = performance.now(); // End timing
+        console.log(`HTML for ${seqGroupID} generated in ${(t1 - t0).toFixed(1)} ms`);
+    });
+}
+
+function defineData() {
+    // Returns the data - see the docstring of the Python HTML class to understand the structure of this object.
+
+    return {"AGGDATA": {"max": [38.75], "frac_nonzero": [0.0358], "skew": [], "kurtosis": []}, "DASHBOARD_DATA": {"4902": {"actsHistogramData": {"0": {"y": [749, 6879, 3522, 814, 184, 265, 1, 0, 1, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 128, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 128, 0, 128], "x": [1.8493, 2.59477, 3.34023, 4.0857, 4.83117, 5.57664, 6.32211, 7.06758, 7.81305, 8.55852, 9.30398, 10.04945, 10.79492, 11.54039, 12.28586, 13.03133, 13.7768, 14.52227, 15.26773, 16.0132, 16.75867, 17.50414, 18.24961, 18.99508, 19.74055, 20.48602, 21.23148, 21.97695, 22.72242, 23.46789, 24.21336, 24.95883, 25.7043, 26.44977, 27.19523, 27.9407, 28.68617, 29.43164, 30.17711, 30.92258, 31.66805, 32.41352, 33.15899, 33.90445, 34.64992, 35.39539, 36.14086, 36.88633, 37.6318, 38.37727], "ticks": [0, 12.9, 25.8, 38.7], "colors": ["#ffce92", "#ffcc8f", "#ffcb8c", "#ffca89", "#ffc886", "#ffc783", "#ffc680", "#ffc47d", "#ffc37a", "#ffc277", "#ffc074", "#ffbf71", "#ffbe6e", "#ffbc6b", "#ffbb68", "#ffba65", "#ffb862", "#ffb75f", "#ffb55c", "#ffb459", "#ffb356", "#ffb153", "#ffb050", "#ffaf4d", "#ffad4a", "#ffac47", "#ffab44", "#ffa941", "#ffa83e", "#ffa73b", "#ffa538", "#ffa435", "#ffa332", "#ffa12f", "#ffa02c", "#ff9e29", "#ff9d26", "#ff9c23", "#ff9a20", "#ff991d", "#ff981a", "#ff9617", "#ff9514", "#ff9411", "#ff920e", "#ff910b", "#ff9008", "#ff8e05", "#ff8d02", "#ff8c00"], "title": "ACTIVATIONS<br>DENSITY = 3.580%"}}, "logitsATableData": {"0": {"negLogits": [{"symbol": "aceae", "value": -0.01, "color": "rgba(255,34,34,0.5)"}, {"symbol": "\u2581fals", "value": -0.01, "color": "rgba(255,57,57,0.5)"}, {"symbol": "\u2581curious", "value": -0.01, "color": "rgba(255,59,59,0.5)"}, {"symbol": "package", "value": -0.01, "color": "rgba(255,67,67,0.5)"}], "posLogits": [{"symbol": "\u2581read", "value": 0.01, "color": "rgba(0,0,255,0.5)"}, {"symbol": "\u2581Read", "value": 0.01, "color": "rgba(10,10,255,0.5)"}, {"symbol": "Read", "value": 0.01, "color": "rgba(25,25,255,0.5)"}, {"symbol": "\u2581write", "value": 0.01, "color": "rgba(35,35,255,0.5)"}]}}, "logitsBTableData": {"0": {"negLogits": [{"symbol": "<0x0A>", "value": -0.0, "color": "rgba(255,30,30,0.5)"}, {"symbol": "\u2581Chand", "value": -0.0, "color": "rgba(255,31,31,0.5)"}, {"symbol": "\u2581stiff", "value": -0.0, "color": "rgba(255,42,42,0.5)"}, {"symbol": "\u2581\u2198", "value": -0.0, "color": "rgba(255,62,62,0.5)"}], "posLogits": [{"symbol": "stylesheet", "value": 0.0, "color": "rgba(0,0,255,0.5)"}, {"symbol": "\u2581latach", "value": 0.0, "color": "rgba(21,21,255,0.5)"}, {"symbol": "\u2581\u043d\u0430\u0441\u0435\u0459\u0435", "value": 0.0, "color": "rgba(36,36,255,0.5)"}, {"symbol": "ww", "value": 0.0, "color": "rgba(39,39,255,0.5)"}]}}, "featureTablesData": {"0": {"decoderCosineSim": [{"value": "+0.005"}], "relativeDecoderStrength": [{"index": "Base", "value": "+0.926"}, {"index": "Finetuned", "value": "+0.074"}]}}, "tokenData": {"seq-group-1-0": {"data": [[{"tok": "\u2581)", "tokID": 1911, "tokenLogit": -0.0009, "isBold": false}, {"tok": "\u2581.", "tokID": 1610, "tokenLogit": 0.0011, "isBold": false}, {"tok": "<0x0A>", "tokID": 781, "tokenLogit": 0.001, "isBold": false}, {"tok": "the", "tokID": 2005, "tokenLogit": 0.0009, "isBold": false}, {"tok": "\u2581public", "tokID": 1566, "tokenLogit": 0.0022, "isBold": false}, {"tok": "\u2581may", "tokID": 1761, "tokenLogit": 0.0005, "isBold": true, "featAct": 10.1875, "bgColor": "#ffe1bc"}, {"tok": "\u2581read", "tokID": 1988, "tokenLogit": 0.0091, "isBold": false, "posToks": ["\u2581Read", "\u2581priorities", "Read", "\u5f88", "\u2581Nav"], "negToks": ["scious", "\u2581restaur", "connect", "\u2581curious", "\u2581alors"], "posVal": [0.875, 0.8125, 0.8125, 0.8125, 0.8125], "negVal": [-0.75, -0.75, -0.75, -0.75, -0.75], "lossEffect": -0.75, "uColor": "rgb(63,63,255)"}, {"tok": "\u2581and", "tokID": 1072, "tokenLogit": -0.0001, "isBold": false}, {"tok": "\u2581copy", "tokID": 3850, "tokenLogit": 0.0028, "isBold": false}, {"tok": "\u2581any", "tokID": 1475, "tokenLogit": -0.0001, "isBold": false}, {"tok": "\u2581materials", "tokID": 7837, "tokenLogit": -0.0025, "isBold": false}], [{"tok": "ized", "tokID": 2100, "tokenLogit": 0.0004, "isBold": false}, {"tok": "\u2581firm", "tokID": 6567, "tokenLogit": 0.0005, "isBold": false}, {"tok": "\u2581commit", "tokID": 6221, "tokenLogit": -0.0018, "isBold": false}, {"tok": "ments", "tokID": 2107, "tokenLogit": 0.0005, "isBold": false}, {"tok": "\u2581,", "tokID": 1968, "tokenLogit": -0.0, "isBold": false}, {"tok": "\u2581and", "tokID": 1072, "tokenLogit": -0.0001, "isBold": true, "featAct": 7.875, "bgColor": "#ffe8cb"}, {"tok": "\u2581written", "tokID": 5009, "tokenLogit": 0.0042, "isBold": false, "posToks": ["\u5f88", "\u2581subtle", "\u2581read", "\u4e34", "\u2581write"], "negToks": ["()}", "++]", "\u2581v\u00e1l", "\u2581curious", "\u2581\\]"], "posVal": [0.875, 0.875, 0.875, 0.8125, 0.8125], "negVal": [-0.9375, -0.875, -0.8125, -0.8125, -0.75], "lossEffect": -0.4375, "uColor": "rgb(143,143,255)"}, {"tok": "\u2581loan", "tokID": 10744, "tokenLogit": -0.0003, "isBold": false}, {"tok": "\u2581com", "tokID": 1200, "tokenLogit": 0.001, "isBold": false, "featAct": 3.3125, "bgColor": "#fff6ea"}, {"tok": "-", "tokID": 29501, "tokenLogit": 0.001, "isBold": false, "posToks": ["\u2581read", "Read", "\u2581Read", "Dev", "\u2581write"], "negToks": ["\u2581fals", "package", "\u2581meant", "\u2581anche", "\u2581pel"], "posVal": [0.8125, 0.75, 0.6875, 0.625, 0.625], "negVal": [-0.6875, -0.5625, -0.5625, -0.5625, -0.5625], "lossEffect": -0.0625, "uColor": "rgb(239,239,255)"}, {"tok": "\u2581mit", "tokID": 3135, "tokenLogit": 0.0016, "isBold": false}], [{"tok": "\u2581systems", "tokID": 5686, "tokenLogit": -0.0015, "isBold": false}, {"tok": "\u2581;", "tokID": 3521, "tokenLogit": -0.0016, "isBold": false}, {"tok": "\u2581mission", "tokID": 7791, "tokenLogit": 0.0017, "isBold": false}, {"tok": "\u2581operations", "tokID": 7701, "tokenLogit": 0.0, "isBold": false}, {"tok": "\u2581support", "tokID": 2528, "tokenLogit": 0.0001, "isBold": false}, {"tok": "\u2581,", "tokID": 1968, "tokenLogit": -0.0, "isBold": true, "featAct": 6.5938, "bgColor": "#ffecd4"}, {"tok": "\u2581read", "tokID": 1988, "tokenLogit": 0.0091, "isBold": false, "posToks": ["Read", "\u2581Read", "\u2581read", "\u8fdb", "\u2581reading"], "negToks": ["\u2581allerg", "\u2581bild", "\u2581foods", "\u2581curious", "\u2581restaur"], "posVal": [0.9375, 0.9375, 0.875, 0.8125, 0.75], "negVal": [-0.6875, -0.6875, -0.625, -0.625, -0.625], "lossEffect": -0.875, "uColor": "rgb(31,31,255)"}, {"tok": "iness", "tokID": 2262, "tokenLogit": -0.0007, "isBold": false}, {"tok": "\u2581,", "tokID": 1968, "tokenLogit": -0.0, "isBold": false}, {"tok": "\u2581engineering", "tokID": 14088, "tokenLogit": -0.0001, "isBold": false}, {"tok": "\u2581support", "tokID": 2528, "tokenLogit": 0.0001, "isBold": false}], [{"tok": "\u2581Read", "tokID": 5707, "tokenLogit": 0.0087, "isBold": false, "featAct": 38.75, "bgColor": "#ff8c00", "posToks": ["\u2581utter", "\u2581ende", "agn", "ably", "ble"], "negToks": ["\u2581Sak", "\u2581Tam", "\u2581Ly", "\u2581McK", "\u2581logo"], "posVal": [1.0625, 1.0, 0.875, 0.8125, 0.8125], "negVal": [-1.0, -0.9375, -0.9375, -0.9375, -0.9375], "lossEffect": -0.625, "uColor": "rgb(95,95,255)"}, {"tok": "\u2581the", "tokID": 1040, "tokenLogit": 0.0003, "isBold": false, "featAct": 21.75, "bgColor": "#ffbf70", "posToks": ["\u2581read", "\u2581Read", "Read", "\u2581reads", "\u2581write"], "negToks": ["\u2581curious", "\u2581anche", "aceae", "\u2581kennis", "river"], "posVal": [2.0625, 1.875, 1.75, 1.5625, 1.5625], "negVal": [-1.5, -1.375, -1.25, -1.25, -1.25], "lossEffect": -0.0, "uColor": "rgb(255,255,255)"}, {"tok": "\u2581following", "tokID": 3064, "tokenLogit": 0.0004, "isBold": false, "featAct": 4.9688, "bgColor": "#fff1df", "posToks": ["\u2581Read", "Read", "\u2581read", "\u2581write", "velle"], "negToks": ["aceae", "\u2581fals", "\u2581cos\u00ec", "package", "SYMBOL"], "posVal": [1.5, 1.4375, 1.4375, 1.3125, 1.25], "negVal": [-1.4375, -1.375, -1.375, -1.3125, -1.25], "lossEffect": -0.0, "uColor": "rgb(255,255,255)"}, {"tok": "\u2581passage", "tokID": 13048, "tokenLogit": 0.0025, "isBold": false, "featAct": 5.8125, "bgColor": "#ffeed9", "posToks": ["\u2581read", "\u2581Read", "Read", "\u2581write", "\u2581reading"], "negToks": ["aceae", "\u2581curious", "package", "++]", "\u2581anche"], "posVal": [1.0, 1.0, 0.9375, 0.875, 0.75], "negVal": [-0.875, -0.75, -0.75, -0.75, -0.75], "lossEffect": -0.3125, "uColor": "rgb(175,175,255)"}, {"tok": "\u2581and", "tokID": 1072, "tokenLogit": -0.0001, "isBold": false, "posToks": ["\u2581read", "\u2581Read", "Read", "\u2581write", "\u2581Pitt"], "negToks": ["\u2581fals", "aceae", "\u2581\u017e", "\u2581anche", "\u00f6r"], "posVal": [0.9375, 0.875, 0.875, 0.8125, 0.75], "negVal": [-0.8125, -0.8125, -0.6875, -0.6875, -0.6875], "lossEffect": -0.0625, "uColor": "rgb(239,239,255)"}, {"tok": "\u2581then", "tokID": 1636, "tokenLogit": 0.0018, "isBold": true, "featAct": 5.7812, "bgColor": "#ffeed9"}, {"tok": "\u2581write", "tokID": 4092, "tokenLogit": 0.0078, "isBold": false, "featAct": 4.4375, "bgColor": "#fff2e2", "posToks": ["Read", "\u2581read", "\u2581Denver", "\u2581Read", "\u2581write"], "negToks": ["\u2581fals", "aceae", "SYMBOL", "\u2581pap", "package"], "posVal": [0.8125, 0.8125, 0.75, 0.75, 0.75], "negVal": [-0.75, -0.6875, -0.625, -0.625, -0.625], "lossEffect": -0.75, "uColor": "rgb(63,63,255)"}, {"tok": "\u2581python", "tokID": 22734, "tokenLogit": -0.0001, "isBold": false, "posToks": ["\u2581read", "\u2581Read", "Read", "\u2581write", "\u2581reading"], "negToks": ["aceae", "\u2581anche", "\u2581restaur", "\u2581curious", "package"], "posVal": [0.9375, 0.9375, 0.875, 0.875, 0.75], "negVal": [-0.8125, -0.6875, -0.6875, -0.6875, -0.6875], "lossEffect": -0.0, "uColor": "rgb(255,255,255)"}, {"tok": "\u2581code", "tokID": 3464, "tokenLogit": 0.0014, "isBold": false}, {"tok": "\u2581to", "tokID": 1066, "tokenLogit": 0.0012, "isBold": false, "featAct": 4.0625, "bgColor": "#fff3e5"}, {"tok": "\u2581answer", "tokID": 5140, "tokenLogit": 0.0005, "isBold": false, "featAct": 2.7969, "bgColor": "#fff7ed", "posToks": ["\u2581read", "\u2581Read", "\u2581sunlight", "Read", "\u2581write"], "negToks": ["\u2581fals", "aceae", "\u2581pione", "\u2581curious", "package"], "posVal": [0.75, 0.6875, 0.625, 0.625, 0.625], "negVal": [-0.625, -0.625, -0.5625, -0.5625, -0.5625], "lossEffect": -0.0625, "uColor": "rgb(239,239,255)"}], [{"tok": "\u2581Read", "tokID": 5707, "tokenLogit": 0.0087, "isBold": false, "featAct": 38.75, "bgColor": "#ff8c00", "posToks": ["\u2581utter", "\u2581ende", "agn", "ably", "ble"], "negToks": ["\u2581Sak", "\u2581Tam", "\u2581Ly", "\u2581McK", "\u2581logo"], "posVal": [1.0625, 1.0, 0.875, 0.8125, 0.8125], "negVal": [-1.0, -0.9375, -0.9375, -0.9375, -0.9375], "lossEffect": -0.625, "uColor": "rgb(95,95,255)"}, {"tok": "\u2581the", "tokID": 1040, "tokenLogit": 0.0003, "isBold": false, "featAct": 21.75, "bgColor": "#ffbf70", "posToks": ["\u2581read", "\u2581Read", "Read", "\u2581reads", "\u2581write"], "negToks": ["\u2581curious", "\u2581anche", "aceae", "\u2581kennis", "river"], "posVal": [2.0625, 1.875, 1.75, 1.5625, 1.5625], "negVal": [-1.5, -1.375, -1.25, -1.25, -1.25], "lossEffect": -0.0, "uColor": "rgb(255,255,255)"}, {"tok": "\u2581following", "tokID": 3064, "tokenLogit": 0.0004, "isBold": false, "featAct": 4.9688, "bgColor": "#fff1df", "posToks": ["\u2581Read", "Read", "\u2581read", "\u2581write", "velle"], "negToks": ["aceae", "\u2581fals", "\u2581cos\u00ec", "package", "SYMBOL"], "posVal": [1.5, 1.4375, 1.4375, 1.3125, 1.25], "negVal": [-1.4375, -1.375, -1.375, -1.3125, -1.25], "lossEffect": -0.0, "uColor": "rgb(255,255,255)"}, {"tok": "\u2581passage", "tokID": 13048, "tokenLogit": 0.0025, "isBold": false, "featAct": 5.8125, "bgColor": "#ffeed9", "posToks": ["\u2581read", "\u2581Read", "Read", "\u2581write", "\u2581reading"], "negToks": ["aceae", "\u2581curious", "package", "++]", "\u2581anche"], "posVal": [1.0, 1.0, 0.9375, 0.875, 0.75], "negVal": [-0.875, -0.75, -0.75, -0.75, -0.75], "lossEffect": -0.3125, "uColor": "rgb(175,175,255)"}, {"tok": "\u2581and", "tokID": 1072, "tokenLogit": -0.0001, "isBold": false, "posToks": ["\u2581read", "\u2581Read", "Read", "\u2581write", "\u2581Pitt"], "negToks": ["\u2581fals", "aceae", "\u2581\u017e", "\u2581anche", "\u00f6r"], "posVal": [0.9375, 0.875, 0.875, 0.8125, 0.75], "negVal": [-0.8125, -0.8125, -0.6875, -0.6875, -0.6875], "lossEffect": -0.0625, "uColor": "rgb(239,239,255)"}, {"tok": "\u2581then", "tokID": 1636, "tokenLogit": 0.0018, "isBold": true, "featAct": 5.7812, "bgColor": "#ffeed9"}, {"tok": "\u2581write", "tokID": 4092, "tokenLogit": 0.0078, "isBold": false, "featAct": 4.4375, "bgColor": "#fff2e2", "posToks": ["Read", "\u2581read", "\u2581Denver", "\u2581Read", "\u2581write"], "negToks": ["\u2581fals", "aceae", "SYMBOL", "\u2581pap", "package"], "posVal": [0.8125, 0.8125, 0.75, 0.75, 0.75], "negVal": [-0.75, -0.6875, -0.625, -0.625, -0.625], "lossEffect": -0.75, "uColor": "rgb(63,63,255)"}, {"tok": "\u2581python", "tokID": 22734, "tokenLogit": -0.0001, "isBold": false, "posToks": ["\u2581read", "\u2581Read", "Read", "\u2581write", "\u2581reading"], "negToks": ["aceae", "\u2581anche", "\u2581restaur", "\u2581curious", "package"], "posVal": [0.9375, 0.9375, 0.875, 0.875, 0.75], "negVal": [-0.8125, -0.6875, -0.6875, -0.6875, -0.6875], "lossEffect": -0.0, "uColor": "rgb(255,255,255)"}, {"tok": "\u2581code", "tokID": 3464, "tokenLogit": 0.0014, "isBold": false}, {"tok": "\u2581to", "tokID": 1066, "tokenLogit": 0.0012, "isBold": false, "featAct": 4.0625, "bgColor": "#fff3e5"}, {"tok": "\u2581answer", "tokID": 5140, "tokenLogit": 0.0005, "isBold": false, "featAct": 2.7969, "bgColor": "#fff7ed", "posToks": ["\u2581read", "\u2581Read", "\u2581sunlight", "Read", "\u2581write"], "negToks": ["\u2581fals", "aceae", "\u2581pione", "\u2581curious", "package"], "posVal": [0.75, 0.6875, 0.625, 0.625, 0.625], "negVal": [-0.625, -0.625, -0.5625, -0.5625, -0.5625], "lossEffect": -0.0625, "uColor": "rgb(239,239,255)"}], [{"tok": "\u2581Read", "tokID": 5707, "tokenLogit": 0.0087, "isBold": false, "featAct": 38.75, "bgColor": "#ff8c00", "posToks": ["\u2581utter", "\u2581ende", "agn", "ably", "ble"], "negToks": ["\u2581Sak", "\u2581Tam", "\u2581Ly", "\u2581McK", "\u2581logo"], "posVal": [1.0625, 1.0, 0.875, 0.8125, 0.8125], "negVal": [-1.0, -0.9375, -0.9375, -0.9375, -0.9375], "lossEffect": -0.625, "uColor": "rgb(95,95,255)"}, {"tok": "\u2581the", "tokID": 1040, "tokenLogit": 0.0003, "isBold": false, "featAct": 21.75, "bgColor": "#ffbf70", "posToks": ["\u2581read", "\u2581Read", "Read", "\u2581reads", "\u2581write"], "negToks": ["\u2581curious", "\u2581anche", "aceae", "\u2581kennis", "river"], "posVal": [2.0625, 1.875, 1.75, 1.5625, 1.5625], "negVal": [-1.5, -1.375, -1.25, -1.25, -1.25], "lossEffect": -0.0, "uColor": "rgb(255,255,255)"}, {"tok": "\u2581following", "tokID": 3064, "tokenLogit": 0.0004, "isBold": false, "featAct": 4.9688, "bgColor": "#fff1df", "posToks": ["\u2581Read", "Read", "\u2581read", "\u2581write", "velle"], "negToks": ["aceae", "\u2581fals", "\u2581cos\u00ec", "package", "SYMBOL"], "posVal": [1.5, 1.4375, 1.4375, 1.3125, 1.25], "negVal": [-1.4375, -1.375, -1.375, -1.3125, -1.25], "lossEffect": -0.0, "uColor": "rgb(255,255,255)"}, {"tok": "\u2581passage", "tokID": 13048, "tokenLogit": 0.0025, "isBold": false, "featAct": 5.8125, "bgColor": "#ffeed9", "posToks": ["\u2581read", "\u2581Read", "Read", "\u2581write", "\u2581reading"], "negToks": ["aceae", "\u2581curious", "package", "++]", "\u2581anche"], "posVal": [1.0, 1.0, 0.9375, 0.875, 0.75], "negVal": [-0.875, -0.75, -0.75, -0.75, -0.75], "lossEffect": -0.3125, "uColor": "rgb(175,175,255)"}, {"tok": "\u2581and", "tokID": 1072, "tokenLogit": -0.0001, "isBold": false, "posToks": ["\u2581read", "\u2581Read", "Read", "\u2581write", "\u2581Pitt"], "negToks": ["\u2581fals", "aceae", "\u2581\u017e", "\u2581anche", "\u00f6r"], "posVal": [0.9375, 0.875, 0.875, 0.8125, 0.75], "negVal": [-0.8125, -0.8125, -0.6875, -0.6875, -0.6875], "lossEffect": -0.0625, "uColor": "rgb(239,239,255)"}, {"tok": "\u2581then", "tokID": 1636, "tokenLogit": 0.0018, "isBold": true, "featAct": 5.7812, "bgColor": "#ffeed9"}, {"tok": "\u2581write", "tokID": 4092, "tokenLogit": 0.0078, "isBold": false, "featAct": 4.4375, "bgColor": "#fff2e2", "posToks": ["Read", "\u2581read", "\u2581Denver", "\u2581Read", "\u2581write"], "negToks": ["\u2581fals", "aceae", "SYMBOL", "\u2581pap", "package"], "posVal": [0.8125, 0.8125, 0.75, 0.75, 0.75], "negVal": [-0.75, -0.6875, -0.625, -0.625, -0.625], "lossEffect": -0.75, "uColor": "rgb(63,63,255)"}, {"tok": "\u2581python", "tokID": 22734, "tokenLogit": -0.0001, "isBold": false, "posToks": ["\u2581read", "\u2581Read", "Read", "\u2581write", "\u2581reading"], "negToks": ["aceae", "\u2581anche", "\u2581restaur", "\u2581curious", "package"], "posVal": [0.9375, 0.9375, 0.875, 0.875, 0.75], "negVal": [-0.8125, -0.6875, -0.6875, -0.6875, -0.6875], "lossEffect": -0.0, "uColor": "rgb(255,255,255)"}, {"tok": "\u2581code", "tokID": 3464, "tokenLogit": 0.0014, "isBold": false}, {"tok": "\u2581to", "tokID": 1066, "tokenLogit": 0.0012, "isBold": false, "featAct": 4.0625, "bgColor": "#fff3e5"}, {"tok": "\u2581answer", "tokID": 5140, "tokenLogit": 0.0005, "isBold": false, "featAct": 2.7969, "bgColor": "#fff7ed", "posToks": ["\u2581read", "\u2581Read", "\u2581sunlight", "Read", "\u2581write"], "negToks": ["\u2581fals", "aceae", "\u2581pione", "\u2581curious", "package"], "posVal": [0.75, 0.6875, 0.625, 0.625, 0.625], "negVal": [-0.625, -0.625, -0.5625, -0.5625, -0.5625], "lossEffect": -0.0625, "uColor": "rgb(239,239,255)"}], [{"tok": "\u2581Read", "tokID": 5707, "tokenLogit": 0.0087, "isBold": false, "featAct": 38.75, "bgColor": "#ff8c00", "posToks": ["\u2581utter", "\u2581ende", "agn", "ably", "ble"], "negToks": ["\u2581Sak", "\u2581Tam", "\u2581Ly", "\u2581McK", "\u2581logo"], "posVal": [1.0625, 1.0, 0.875, 0.8125, 0.8125], "negVal": [-1.0, -0.9375, -0.9375, -0.9375, -0.9375], "lossEffect": -0.625, "uColor": "rgb(95,95,255)"}, {"tok": "\u2581the", "tokID": 1040, "tokenLogit": 0.0003, "isBold": false, "featAct": 21.75, "bgColor": "#ffbf70", "posToks": ["\u2581read", "\u2581Read", "Read", "\u2581reads", "\u2581write"], "negToks": ["\u2581curious", "\u2581anche", "aceae", "\u2581kennis", "river"], "posVal": [2.0625, 1.875, 1.75, 1.5625, 1.5625], "negVal": [-1.5, -1.375, -1.25, -1.25, -1.25], "lossEffect": -0.0, "uColor": "rgb(255,255,255)"}, {"tok": "\u2581following", "tokID": 3064, "tokenLogit": 0.0004, "isBold": false, "featAct": 4.9688, "bgColor": "#fff1df", "posToks": ["\u2581Read", "Read", "\u2581read", "\u2581write", "velle"], "negToks": ["aceae", "\u2581fals", "\u2581cos\u00ec", "package", "SYMBOL"], "posVal": [1.5, 1.4375, 1.4375, 1.3125, 1.25], "negVal": [-1.4375, -1.375, -1.375, -1.3125, -1.25], "lossEffect": -0.0, "uColor": "rgb(255,255,255)"}, {"tok": "\u2581passage", "tokID": 13048, "tokenLogit": 0.0025, "isBold": false, "featAct": 5.8125, "bgColor": "#ffeed9", "posToks": ["\u2581read", "\u2581Read", "Read", "\u2581write", "\u2581reading"], "negToks": ["aceae", "\u2581curious", "package", "++]", "\u2581anche"], "posVal": [1.0, 1.0, 0.9375, 0.875, 0.75], "negVal": [-0.875, -0.75, -0.75, -0.75, -0.75], "lossEffect": -0.3125, "uColor": "rgb(175,175,255)"}, {"tok": "\u2581and", "tokID": 1072, "tokenLogit": -0.0001, "isBold": false, "posToks": ["\u2581read", "\u2581Read", "Read", "\u2581write", "\u2581Pitt"], "negToks": ["\u2581fals", "aceae", "\u2581\u017e", "\u2581anche", "\u00f6r"], "posVal": [0.9375, 0.875, 0.875, 0.8125, 0.75], "negVal": [-0.8125, -0.8125, -0.6875, -0.6875, -0.6875], "lossEffect": -0.0625, "uColor": "rgb(239,239,255)"}, {"tok": "\u2581then", "tokID": 1636, "tokenLogit": 0.0018, "isBold": true, "featAct": 5.7812, "bgColor": "#ffeed9"}, {"tok": "\u2581write", "tokID": 4092, "tokenLogit": 0.0078, "isBold": false, "featAct": 4.4375, "bgColor": "#fff2e2", "posToks": ["Read", "\u2581read", "\u2581Denver", "\u2581Read", "\u2581write"], "negToks": ["\u2581fals", "aceae", "SYMBOL", "\u2581pap", "package"], "posVal": [0.8125, 0.8125, 0.75, 0.75, 0.75], "negVal": [-0.75, -0.6875, -0.625, -0.625, -0.625], "lossEffect": -0.75, "uColor": "rgb(63,63,255)"}, {"tok": "\u2581python", "tokID": 22734, "tokenLogit": -0.0001, "isBold": false, "posToks": ["\u2581read", "\u2581Read", "Read", "\u2581write", "\u2581reading"], "negToks": ["aceae", "\u2581anche", "\u2581restaur", "\u2581curious", "package"], "posVal": [0.9375, 0.9375, 0.875, 0.875, 0.75], "negVal": [-0.8125, -0.6875, -0.6875, -0.6875, -0.6875], "lossEffect": -0.0, "uColor": "rgb(255,255,255)"}, {"tok": "\u2581code", "tokID": 3464, "tokenLogit": 0.0014, "isBold": false}, {"tok": "\u2581to", "tokID": 1066, "tokenLogit": 0.0012, "isBold": false, "featAct": 4.0625, "bgColor": "#fff3e5"}, {"tok": "\u2581answer", "tokID": 5140, "tokenLogit": 0.0005, "isBold": false, "featAct": 2.7969, "bgColor": "#fff7ed", "posToks": ["\u2581read", "\u2581Read", "\u2581sunlight", "Read", "\u2581write"], "negToks": ["\u2581fals", "aceae", "\u2581pione", "\u2581curious", "package"], "posVal": [0.75, 0.6875, 0.625, 0.625, 0.625], "negVal": [-0.625, -0.625, -0.5625, -0.5625, -0.5625], "lossEffect": -0.0625, "uColor": "rgb(239,239,255)"}], [{"tok": "\u2581Read", "tokID": 5707, "tokenLogit": 0.0087, "isBold": false, "featAct": 38.75, "bgColor": "#ff8c00", "posToks": ["\u2581utter", "\u2581ende", "agn", "ably", "ble"], "negToks": ["\u2581Sak", "\u2581Tam", "\u2581Ly", "\u2581McK", "\u2581logo"], "posVal": [1.0625, 1.0, 0.875, 0.8125, 0.8125], "negVal": [-1.0, -0.9375, -0.9375, -0.9375, -0.9375], "lossEffect": -0.625, "uColor": "rgb(95,95,255)"}, {"tok": "\u2581the", "tokID": 1040, "tokenLogit": 0.0003, "isBold": false, "featAct": 21.75, "bgColor": "#ffbf70", "posToks": ["\u2581read", "\u2581Read", "Read", "\u2581reads", "\u2581write"], "negToks": ["\u2581curious", "\u2581anche", "aceae", "\u2581kennis", "river"], "posVal": [2.0625, 1.875, 1.75, 1.5625, 1.5625], "negVal": [-1.5, -1.375, -1.25, -1.25, -1.25], "lossEffect": -0.0, "uColor": "rgb(255,255,255)"}, {"tok": "\u2581following", "tokID": 3064, "tokenLogit": 0.0004, "isBold": false, "featAct": 4.9688, "bgColor": "#fff1df", "posToks": ["\u2581Read", "Read", "\u2581read", "\u2581write", "velle"], "negToks": ["aceae", "\u2581fals", "\u2581cos\u00ec", "package", "SYMBOL"], "posVal": [1.5, 1.4375, 1.4375, 1.3125, 1.25], "negVal": [-1.4375, -1.375, -1.375, -1.3125, -1.25], "lossEffect": -0.0, "uColor": "rgb(255,255,255)"}, {"tok": "\u2581passage", "tokID": 13048, "tokenLogit": 0.0025, "isBold": false, "featAct": 5.8125, "bgColor": "#ffeed9", "posToks": ["\u2581read", "\u2581Read", "Read", "\u2581write", "\u2581reading"], "negToks": ["aceae", "\u2581curious", "package", "++]", "\u2581anche"], "posVal": [1.0, 1.0, 0.9375, 0.875, 0.75], "negVal": [-0.875, -0.75, -0.75, -0.75, -0.75], "lossEffect": -0.3125, "uColor": "rgb(175,175,255)"}, {"tok": "\u2581and", "tokID": 1072, "tokenLogit": -0.0001, "isBold": false, "posToks": ["\u2581read", "\u2581Read", "Read", "\u2581write", "\u2581Pitt"], "negToks": ["\u2581fals", "aceae", "\u2581\u017e", "\u2581anche", "\u00f6r"], "posVal": [0.9375, 0.875, 0.875, 0.8125, 0.75], "negVal": [-0.8125, -0.8125, -0.6875, -0.6875, -0.6875], "lossEffect": -0.0625, "uColor": "rgb(239,239,255)"}, {"tok": "\u2581then", "tokID": 1636, "tokenLogit": 0.0018, "isBold": true, "featAct": 5.7812, "bgColor": "#ffeed9"}, {"tok": "\u2581write", "tokID": 4092, "tokenLogit": 0.0078, "isBold": false, "featAct": 4.4375, "bgColor": "#fff2e2", "posToks": ["Read", "\u2581read", "\u2581Denver", "\u2581Read", "\u2581write"], "negToks": ["\u2581fals", "aceae", "SYMBOL", "\u2581pap", "package"], "posVal": [0.8125, 0.8125, 0.75, 0.75, 0.75], "negVal": [-0.75, -0.6875, -0.625, -0.625, -0.625], "lossEffect": -0.75, "uColor": "rgb(63,63,255)"}, {"tok": "\u2581python", "tokID": 22734, "tokenLogit": -0.0001, "isBold": false, "posToks": ["\u2581read", "\u2581Read", "Read", "\u2581write", "\u2581reading"], "negToks": ["aceae", "\u2581anche", "\u2581restaur", "\u2581curious", "package"], "posVal": [0.9375, 0.9375, 0.875, 0.875, 0.75], "negVal": [-0.8125, -0.6875, -0.6875, -0.6875, -0.6875], "lossEffect": -0.0, "uColor": "rgb(255,255,255)"}, {"tok": "\u2581code", "tokID": 3464, "tokenLogit": 0.0014, "isBold": false}, {"tok": "\u2581to", "tokID": 1066, "tokenLogit": 0.0012, "isBold": false, "featAct": 4.0625, "bgColor": "#fff3e5"}, {"tok": "\u2581answer", "tokID": 5140, "tokenLogit": 0.0005, "isBold": false, "featAct": 2.7969, "bgColor": "#fff7ed", "posToks": ["\u2581read", "\u2581Read", "\u2581sunlight", "Read", "\u2581write"], "negToks": ["\u2581fals", "aceae", "\u2581pione", "\u2581curious", "package"], "posVal": [0.75, 0.6875, 0.625, 0.625, 0.625], "negVal": [-0.625, -0.625, -0.5625, -0.5625, -0.5625], "lossEffect": -0.0625, "uColor": "rgb(239,239,255)"}], [{"tok": "\u2581Read", "tokID": 5707, "tokenLogit": 0.0087, "isBold": false, "featAct": 38.75, "bgColor": "#ff8c00", "posToks": ["\u2581utter", "\u2581ende", "agn", "ably", "ble"], "negToks": ["\u2581Sak", "\u2581Tam", "\u2581Ly", "\u2581McK", "\u2581logo"], "posVal": [1.0625, 1.0, 0.875, 0.8125, 0.8125], "negVal": [-1.0, -0.9375, -0.9375, -0.9375, -0.9375], "lossEffect": -0.625, "uColor": "rgb(95,95,255)"}, {"tok": "\u2581the", "tokID": 1040, "tokenLogit": 0.0003, "isBold": false, "featAct": 21.75, "bgColor": "#ffbf70", "posToks": ["\u2581read", "\u2581Read", "Read", "\u2581reads", "\u2581write"], "negToks": ["\u2581curious", "\u2581anche", "aceae", "\u2581kennis", "river"], "posVal": [2.0625, 1.875, 1.75, 1.5625, 1.5625], "negVal": [-1.5, -1.375, -1.25, -1.25, -1.25], "lossEffect": -0.0, "uColor": "rgb(255,255,255)"}, {"tok": "\u2581following", "tokID": 3064, "tokenLogit": 0.0004, "isBold": false, "featAct": 4.9688, "bgColor": "#fff1df", "posToks": ["\u2581Read", "Read", "\u2581read", "\u2581write", "velle"], "negToks": ["aceae", "\u2581fals", "\u2581cos\u00ec", "package", "SYMBOL"], "posVal": [1.5, 1.4375, 1.4375, 1.3125, 1.25], "negVal": [-1.4375, -1.375, -1.375, -1.3125, -1.25], "lossEffect": -0.0, "uColor": "rgb(255,255,255)"}, {"tok": "\u2581passage", "tokID": 13048, "tokenLogit": 0.0025, "isBold": false, "featAct": 5.8125, "bgColor": "#ffeed9", "posToks": ["\u2581read", "\u2581Read", "Read", "\u2581write", "\u2581reading"], "negToks": ["aceae", "\u2581curious", "package", "++]", "\u2581anche"], "posVal": [1.0, 1.0, 0.9375, 0.875, 0.75], "negVal": [-0.875, -0.75, -0.75, -0.75, -0.75], "lossEffect": -0.3125, "uColor": "rgb(175,175,255)"}, {"tok": "\u2581and", "tokID": 1072, "tokenLogit": -0.0001, "isBold": false, "posToks": ["\u2581read", "\u2581Read", "Read", "\u2581write", "\u2581Pitt"], "negToks": ["\u2581fals", "aceae", "\u2581\u017e", "\u2581anche", "\u00f6r"], "posVal": [0.9375, 0.875, 0.875, 0.8125, 0.75], "negVal": [-0.8125, -0.8125, -0.6875, -0.6875, -0.6875], "lossEffect": -0.0625, "uColor": "rgb(239,239,255)"}, {"tok": "\u2581then", "tokID": 1636, "tokenLogit": 0.0018, "isBold": true, "featAct": 5.7812, "bgColor": "#ffeed9"}, {"tok": "\u2581write", "tokID": 4092, "tokenLogit": 0.0078, "isBold": false, "featAct": 4.4375, "bgColor": "#fff2e2", "posToks": ["Read", "\u2581read", "\u2581Denver", "\u2581Read", "\u2581write"], "negToks": ["\u2581fals", "aceae", "SYMBOL", "\u2581pap", "package"], "posVal": [0.8125, 0.8125, 0.75, 0.75, 0.75], "negVal": [-0.75, -0.6875, -0.625, -0.625, -0.625], "lossEffect": -0.75, "uColor": "rgb(63,63,255)"}, {"tok": "\u2581python", "tokID": 22734, "tokenLogit": -0.0001, "isBold": false, "posToks": ["\u2581read", "\u2581Read", "Read", "\u2581write", "\u2581reading"], "negToks": ["aceae", "\u2581anche", "\u2581restaur", "\u2581curious", "package"], "posVal": [0.9375, 0.9375, 0.875, 0.875, 0.75], "negVal": [-0.8125, -0.6875, -0.6875, -0.6875, -0.6875], "lossEffect": -0.0, "uColor": "rgb(255,255,255)"}, {"tok": "\u2581code", "tokID": 3464, "tokenLogit": 0.0014, "isBold": false}, {"tok": "\u2581to", "tokID": 1066, "tokenLogit": 0.0012, "isBold": false, "featAct": 4.0625, "bgColor": "#fff3e5"}, {"tok": "\u2581answer", "tokID": 5140, "tokenLogit": 0.0005, "isBold": false, "featAct": 2.7969, "bgColor": "#fff7ed", "posToks": ["\u2581read", "\u2581Read", "\u2581sunlight", "Read", "\u2581write"], "negToks": ["\u2581fals", "aceae", "\u2581pione", "\u2581curious", "package"], "posVal": [0.75, 0.6875, 0.625, 0.625, 0.625], "negVal": [-0.625, -0.625, -0.5625, -0.5625, -0.5625], "lossEffect": -0.0625, "uColor": "rgb(239,239,255)"}], [{"tok": "\u2581Read", "tokID": 5707, "tokenLogit": 0.0087, "isBold": false, "featAct": 38.75, "bgColor": "#ff8c00", "posToks": ["\u2581utter", "\u2581ende", "agn", "ably", "ble"], "negToks": ["\u2581Sak", "\u2581Tam", "\u2581Ly", "\u2581McK", "\u2581logo"], "posVal": [1.0625, 1.0, 0.875, 0.8125, 0.8125], "negVal": [-1.0, -0.9375, -0.9375, -0.9375, -0.9375], "lossEffect": -0.625, "uColor": "rgb(95,95,255)"}, {"tok": "\u2581the", "tokID": 1040, "tokenLogit": 0.0003, "isBold": false, "featAct": 21.75, "bgColor": "#ffbf70", "posToks": ["\u2581read", "\u2581Read", "Read", "\u2581reads", "\u2581write"], "negToks": ["\u2581curious", "\u2581anche", "aceae", "\u2581kennis", "river"], "posVal": [2.0625, 1.875, 1.75, 1.5625, 1.5625], "negVal": [-1.5, -1.375, -1.25, -1.25, -1.25], "lossEffect": -0.0, "uColor": "rgb(255,255,255)"}, {"tok": "\u2581following", "tokID": 3064, "tokenLogit": 0.0004, "isBold": false, "featAct": 4.9688, "bgColor": "#fff1df", "posToks": ["\u2581Read", "Read", "\u2581read", "\u2581write", "velle"], "negToks": ["aceae", "\u2581fals", "\u2581cos\u00ec", "package", "SYMBOL"], "posVal": [1.5, 1.4375, 1.4375, 1.3125, 1.25], "negVal": [-1.4375, -1.375, -1.375, -1.3125, -1.25], "lossEffect": -0.0, "uColor": "rgb(255,255,255)"}, {"tok": "\u2581passage", "tokID": 13048, "tokenLogit": 0.0025, "isBold": false, "featAct": 5.8125, "bgColor": "#ffeed9", "posToks": ["\u2581read", "\u2581Read", "Read", "\u2581write", "\u2581reading"], "negToks": ["aceae", "\u2581curious", "package", "++]", "\u2581anche"], "posVal": [1.0, 1.0, 0.9375, 0.875, 0.75], "negVal": [-0.875, -0.75, -0.75, -0.75, -0.75], "lossEffect": -0.3125, "uColor": "rgb(175,175,255)"}, {"tok": "\u2581and", "tokID": 1072, "tokenLogit": -0.0001, "isBold": false, "featAct": 2.1719, "bgColor": "#fff9f1", "posToks": ["\u2581read", "\u2581Read", "Read", "\u2581write", "\u2581Pitt"], "negToks": ["\u2581fals", "aceae", "\u2581\u017e", "\u2581anche", "\u00f6r"], "posVal": [0.9375, 0.875, 0.875, 0.8125, 0.75], "negVal": [-0.8125, -0.8125, -0.6875, -0.6875, -0.6875], "lossEffect": -0.0625, "uColor": "rgb(239,239,255)"}, {"tok": "\u2581then", "tokID": 1636, "tokenLogit": 0.0018, "isBold": true, "featAct": 5.7812, "bgColor": "#ffeed9", "posToks": ["\u2581read", "\u2581Read", "Read", "\u2581write", "\u2581reading"], "negToks": ["aceae", "++]", "\u2581anche", "\u2581fals", "\u2581foods"], "posVal": [0.5, 0.5, 0.4375, 0.4375, 0.375], "negVal": [-0.4375, -0.375, -0.375, -0.375, -0.375], "lossEffect": -0.0625, "uColor": "rgb(239,239,255)"}, {"tok": "\u2581write", "tokID": 4092, "tokenLogit": 0.0078, "isBold": false, "featAct": 4.4375, "bgColor": "#fff2e2", "posToks": ["Read", "\u2581read", "\u2581Denver", "\u2581Read", "\u2581write"], "negToks": ["\u2581fals", "aceae", "SYMBOL", "\u2581pap", "package"], "posVal": [0.8125, 0.8125, 0.75, 0.75, 0.75], "negVal": [-0.75, -0.6875, -0.625, -0.625, -0.625], "lossEffect": -0.75, "uColor": "rgb(63,63,255)"}, {"tok": "\u2581python", "tokID": 22734, "tokenLogit": -0.0001, "isBold": false, "posToks": ["\u2581read", "\u2581Read", "Read", "\u2581write", "\u2581reading"], "negToks": ["aceae", "\u2581anche", "\u2581restaur", "\u2581curious", "package"], "posVal": [0.9375, 0.9375, 0.875, 0.875, 0.75], "negVal": [-0.8125, -0.6875, -0.6875, -0.6875, -0.6875], "lossEffect": -0.0, "uColor": "rgb(255,255,255)"}, {"tok": "\u2581code", "tokID": 3464, "tokenLogit": 0.0014, "isBold": false}, {"tok": "\u2581to", "tokID": 1066, "tokenLogit": 0.0012, "isBold": false, "featAct": 4.0625, "bgColor": "#fff3e5"}, {"tok": "\u2581answer", "tokID": 5140, "tokenLogit": 0.0005, "isBold": false, "featAct": 2.7969, "bgColor": "#fff7ed", "posToks": ["\u2581read", "\u2581Read", "\u2581sunlight", "Read", "\u2581write"], "negToks": ["\u2581fals", "aceae", "\u2581pione", "\u2581curious", "package"], "posVal": [0.75, 0.6875, 0.625, 0.625, 0.625], "negVal": [-0.625, -0.625, -0.5625, -0.5625, -0.5625], "lossEffect": -0.0625, "uColor": "rgb(239,239,255)"}], [{"tok": "\u2581Read", "tokID": 5707, "tokenLogit": 0.0087, "isBold": false, "featAct": 38.75, "bgColor": "#ff8c00", "posToks": ["\u2581utter", "\u2581ende", "agn", "ably", "ble"], "negToks": ["\u2581Sak", "\u2581Tam", "\u2581Ly", "\u2581McK", "\u2581logo"], "posVal": [1.0625, 1.0, 0.875, 0.8125, 0.8125], "negVal": [-1.0, -0.9375, -0.9375, -0.9375, -0.9375], "lossEffect": -0.625, "uColor": "rgb(95,95,255)"}, {"tok": "\u2581the", "tokID": 1040, "tokenLogit": 0.0003, "isBold": false, "featAct": 21.75, "bgColor": "#ffbf70", "posToks": ["\u2581read", "\u2581Read", "Read", "\u2581reads", "\u2581write"], "negToks": ["\u2581curious", "\u2581anche", "aceae", "\u2581kennis", "river"], "posVal": [2.0625, 1.875, 1.75, 1.5625, 1.5625], "negVal": [-1.5, -1.375, -1.25, -1.25, -1.25], "lossEffect": -0.0, "uColor": "rgb(255,255,255)"}, {"tok": "\u2581following", "tokID": 3064, "tokenLogit": 0.0004, "isBold": false, "featAct": 4.9688, "bgColor": "#fff1df", "posToks": ["\u2581Read", "Read", "\u2581read", "\u2581write", "velle"], "negToks": ["aceae", "\u2581fals", "\u2581cos\u00ec", "package", "SYMBOL"], "posVal": [1.5, 1.4375, 1.4375, 1.3125, 1.25], "negVal": [-1.4375, -1.375, -1.375, -1.3125, -1.25], "lossEffect": -0.0, "uColor": "rgb(255,255,255)"}, {"tok": "\u2581passage", "tokID": 13048, "tokenLogit": 0.0025, "isBold": false, "featAct": 5.8125, "bgColor": "#ffeed9", "posToks": ["\u2581read", "\u2581Read", "Read", "\u2581write", "\u2581reading"], "negToks": ["aceae", "\u2581curious", "package", "++]", "\u2581anche"], "posVal": [1.0, 1.0, 0.9375, 0.875, 0.75], "negVal": [-0.875, -0.75, -0.75, -0.75, -0.75], "lossEffect": -0.3125, "uColor": "rgb(175,175,255)"}, {"tok": "\u2581and", "tokID": 1072, "tokenLogit": -0.0001, "isBold": false, "featAct": 2.1719, "bgColor": "#fff9f1", "posToks": ["\u2581read", "\u2581Read", "Read", "\u2581write", "\u2581Pitt"], "negToks": ["\u2581fals", "aceae", "\u2581\u017e", "\u2581anche", "\u00f6r"], "posVal": [0.9375, 0.875, 0.875, 0.8125, 0.75], "negVal": [-0.8125, -0.8125, -0.6875, -0.6875, -0.6875], "lossEffect": -0.0625, "uColor": "rgb(239,239,255)"}, {"tok": "\u2581then", "tokID": 1636, "tokenLogit": 0.0018, "isBold": true, "featAct": 5.7812, "bgColor": "#ffeed9", "posToks": ["\u2581read", "\u2581Read", "Read", "\u2581write", "\u2581reading"], "negToks": ["aceae", "++]", "\u2581anche", "\u2581fals", "\u2581foods"], "posVal": [0.5, 0.5, 0.4375, 0.4375, 0.375], "negVal": [-0.4375, -0.375, -0.375, -0.375, -0.375], "lossEffect": -0.0625, "uColor": "rgb(239,239,255)"}, {"tok": "\u2581write", "tokID": 4092, "tokenLogit": 0.0078, "isBold": false, "featAct": 4.4375, "bgColor": "#fff2e2", "posToks": ["Read", "\u2581read", "\u2581Denver", "\u2581Read", "\u2581write"], "negToks": ["\u2581fals", "aceae", "SYMBOL", "\u2581pap", "package"], "posVal": [0.8125, 0.8125, 0.75, 0.75, 0.75], "negVal": [-0.75, -0.6875, -0.625, -0.625, -0.625], "lossEffect": -0.75, "uColor": "rgb(63,63,255)"}, {"tok": "\u2581python", "tokID": 22734, "tokenLogit": -0.0001, "isBold": false, "posToks": ["\u2581read", "\u2581Read", "Read", "\u2581write", "\u2581reading"], "negToks": ["aceae", "\u2581anche", "\u2581restaur", "\u2581curious", "package"], "posVal": [0.9375, 0.9375, 0.875, 0.875, 0.75], "negVal": [-0.8125, -0.6875, -0.6875, -0.6875, -0.6875], "lossEffect": -0.0, "uColor": "rgb(255,255,255)"}, {"tok": "\u2581code", "tokID": 3464, "tokenLogit": 0.0014, "isBold": false}, {"tok": "\u2581to", "tokID": 1066, "tokenLogit": 0.0012, "isBold": false, "featAct": 4.0625, "bgColor": "#fff3e5"}, {"tok": "\u2581answer", "tokID": 5140, "tokenLogit": 0.0005, "isBold": false, "featAct": 2.7969, "bgColor": "#fff7ed", "posToks": ["\u2581read", "\u2581Read", "\u2581sunlight", "Read", "\u2581write"], "negToks": ["\u2581fals", "aceae", "\u2581pione", "\u2581curious", "package"], "posVal": [0.75, 0.6875, 0.625, 0.625, 0.625], "negVal": [-0.625, -0.625, -0.5625, -0.5625, -0.5625], "lossEffect": -0.0625, "uColor": "rgb(239,239,255)"}], [{"tok": "\u2581Read", "tokID": 5707, "tokenLogit": 0.0087, "isBold": false, "featAct": 38.75, "bgColor": "#ff8c00", "posToks": ["\u2581utter", "\u2581ende", "agn", "ably", "ble"], "negToks": ["\u2581Sak", "\u2581Tam", "\u2581Ly", "\u2581McK", "\u2581logo"], "posVal": [1.0625, 1.0, 0.875, 0.8125, 0.8125], "negVal": [-1.0, -0.9375, -0.9375, -0.9375, -0.9375], "lossEffect": -0.625, "uColor": "rgb(95,95,255)"}, {"tok": "\u2581the", "tokID": 1040, "tokenLogit": 0.0003, "isBold": false, "featAct": 21.75, "bgColor": "#ffbf70", "posToks": ["\u2581read", "\u2581Read", "Read", "\u2581reads", "\u2581write"], "negToks": ["\u2581curious", "\u2581anche", "aceae", "\u2581kennis", "river"], "posVal": [2.0625, 1.875, 1.75, 1.5625, 1.5625], "negVal": [-1.5, -1.375, -1.25, -1.25, -1.25], "lossEffect": -0.0, "uColor": "rgb(255,255,255)"}, {"tok": "\u2581following", "tokID": 3064, "tokenLogit": 0.0004, "isBold": false, "featAct": 4.9688, "bgColor": "#fff1df", "posToks": ["\u2581Read", "Read", "\u2581read", "\u2581write", "velle"], "negToks": ["aceae", "\u2581fals", "\u2581cos\u00ec", "package", "SYMBOL"], "posVal": [1.5, 1.4375, 1.4375, 1.3125, 1.25], "negVal": [-1.4375, -1.375, -1.375, -1.3125, -1.25], "lossEffect": -0.0, "uColor": "rgb(255,255,255)"}, {"tok": "\u2581passage", "tokID": 13048, "tokenLogit": 0.0025, "isBold": false, "featAct": 5.8125, "bgColor": "#ffeed9", "posToks": ["\u2581read", "\u2581Read", "Read", "\u2581write", "\u2581reading"], "negToks": ["aceae", "\u2581curious", "package", "++]", "\u2581anche"], "posVal": [1.0, 1.0, 0.9375, 0.875, 0.75], "negVal": [-0.875, -0.75, -0.75, -0.75, -0.75], "lossEffect": -0.3125, "uColor": "rgb(175,175,255)"}, {"tok": "\u2581and", "tokID": 1072, "tokenLogit": -0.0001, "isBold": false, "posToks": ["\u2581read", "\u2581Read", "Read", "\u2581write", "\u2581Pitt"], "negToks": ["\u2581fals", "aceae", "\u2581\u017e", "\u2581anche", "\u00f6r"], "posVal": [0.9375, 0.875, 0.875, 0.8125, 0.75], "negVal": [-0.8125, -0.8125, -0.6875, -0.6875, -0.6875], "lossEffect": -0.0625, "uColor": "rgb(239,239,255)"}, {"tok": "\u2581then", "tokID": 1636, "tokenLogit": 0.0018, "isBold": true, "featAct": 5.7812, "bgColor": "#ffeed9"}, {"tok": "\u2581write", "tokID": 4092, "tokenLogit": 0.0078, "isBold": false, "featAct": 4.4375, "bgColor": "#fff2e2", "posToks": ["Read", "\u2581read", "\u2581Denver", "\u2581Read", "\u2581write"], "negToks": ["\u2581fals", "aceae", "SYMBOL", "\u2581pap", "package"], "posVal": [0.8125, 0.8125, 0.75, 0.75, 0.75], "negVal": [-0.75, -0.6875, -0.625, -0.625, -0.625], "lossEffect": -0.75, "uColor": "rgb(63,63,255)"}, {"tok": "\u2581python", "tokID": 22734, "tokenLogit": -0.0001, "isBold": false, "posToks": ["\u2581read", "\u2581Read", "Read", "\u2581write", "\u2581reading"], "negToks": ["aceae", "\u2581anche", "\u2581restaur", "\u2581curious", "package"], "posVal": [0.9375, 0.9375, 0.875, 0.875, 0.75], "negVal": [-0.8125, -0.6875, -0.6875, -0.6875, -0.6875], "lossEffect": -0.0, "uColor": "rgb(255,255,255)"}, {"tok": "\u2581code", "tokID": 3464, "tokenLogit": 0.0014, "isBold": false}, {"tok": "\u2581to", "tokID": 1066, "tokenLogit": 0.0012, "isBold": false, "featAct": 4.0625, "bgColor": "#fff3e5"}, {"tok": "\u2581answer", "tokID": 5140, "tokenLogit": 0.0005, "isBold": false, "featAct": 2.7969, "bgColor": "#fff7ed", "posToks": ["\u2581read", "\u2581Read", "\u2581sunlight", "Read", "\u2581write"], "negToks": ["\u2581fals", "aceae", "\u2581pione", "\u2581curious", "package"], "posVal": [0.75, 0.6875, 0.625, 0.625, 0.625], "negVal": [-0.625, -0.625, -0.5625, -0.5625, -0.5625], "lossEffect": -0.0625, "uColor": "rgb(239,239,255)"}], [{"tok": "\u2581Read", "tokID": 5707, "tokenLogit": 0.0087, "isBold": false, "featAct": 38.75, "bgColor": "#ff8c00", "posToks": ["\u2581utter", "\u2581ende", "agn", "ably", "ble"], "negToks": ["\u2581Sak", "\u2581Tam", "\u2581Ly", "\u2581McK", "\u2581logo"], "posVal": [1.0625, 1.0, 0.875, 0.8125, 0.8125], "negVal": [-1.0, -0.9375, -0.9375, -0.9375, -0.9375], "lossEffect": -0.625, "uColor": "rgb(95,95,255)"}, {"tok": "\u2581the", "tokID": 1040, "tokenLogit": 0.0003, "isBold": false, "featAct": 21.75, "bgColor": "#ffbf70", "posToks": ["\u2581read", "\u2581Read", "Read", "\u2581reads", "\u2581write"], "negToks": ["\u2581curious", "\u2581anche", "aceae", "\u2581kennis", "river"], "posVal": [2.0625, 1.875, 1.75, 1.5625, 1.5625], "negVal": [-1.5, -1.375, -1.25, -1.25, -1.25], "lossEffect": -0.0, "uColor": "rgb(255,255,255)"}, {"tok": "\u2581following", "tokID": 3064, "tokenLogit": 0.0004, "isBold": false, "featAct": 4.9688, "bgColor": "#fff1df", "posToks": ["\u2581Read", "Read", "\u2581read", "\u2581write", "velle"], "negToks": ["aceae", "\u2581fals", "\u2581cos\u00ec", "package", "SYMBOL"], "posVal": [1.5, 1.4375, 1.4375, 1.3125, 1.25], "negVal": [-1.4375, -1.375, -1.375, -1.3125, -1.25], "lossEffect": -0.0, "uColor": "rgb(255,255,255)"}, {"tok": "\u2581passage", "tokID": 13048, "tokenLogit": 0.0025, "isBold": false, "featAct": 5.8125, "bgColor": "#ffeed9", "posToks": ["\u2581read", "\u2581Read", "Read", "\u2581write", "\u2581reading"], "negToks": ["aceae", "\u2581curious", "package", "++]", "\u2581anche"], "posVal": [1.0, 1.0, 0.9375, 0.875, 0.75], "negVal": [-0.875, -0.75, -0.75, -0.75, -0.75], "lossEffect": -0.3125, "uColor": "rgb(175,175,255)"}, {"tok": "\u2581and", "tokID": 1072, "tokenLogit": -0.0001, "isBold": false, "featAct": 2.1719, "bgColor": "#fff9f1", "posToks": ["\u2581read", "\u2581Read", "Read", "\u2581write", "\u2581Pitt"], "negToks": ["\u2581fals", "aceae", "\u2581\u017e", "\u2581anche", "\u00f6r"], "posVal": [0.9375, 0.875, 0.875, 0.8125, 0.75], "negVal": [-0.8125, -0.8125, -0.6875, -0.6875, -0.6875], "lossEffect": -0.0625, "uColor": "rgb(239,239,255)"}, {"tok": "\u2581then", "tokID": 1636, "tokenLogit": 0.0018, "isBold": true, "featAct": 5.7812, "bgColor": "#ffeed9", "posToks": ["\u2581read", "\u2581Read", "Read", "\u2581write", "\u2581reading"], "negToks": ["aceae", "++]", "\u2581anche", "\u2581fals", "\u2581foods"], "posVal": [0.5, 0.5, 0.4375, 0.4375, 0.375], "negVal": [-0.4375, -0.375, -0.375, -0.375, -0.375], "lossEffect": -0.0625, "uColor": "rgb(239,239,255)"}, {"tok": "\u2581write", "tokID": 4092, "tokenLogit": 0.0078, "isBold": false, "featAct": 4.4375, "bgColor": "#fff2e2", "posToks": ["Read", "\u2581read", "\u2581Denver", "\u2581Read", "\u2581write"], "negToks": ["\u2581fals", "aceae", "SYMBOL", "\u2581pap", "package"], "posVal": [0.8125, 0.8125, 0.75, 0.75, 0.75], "negVal": [-0.75, -0.6875, -0.625, -0.625, -0.625], "lossEffect": -0.75, "uColor": "rgb(63,63,255)"}, {"tok": "\u2581python", "tokID": 22734, "tokenLogit": -0.0001, "isBold": false, "posToks": ["\u2581read", "\u2581Read", "Read", "\u2581write", "\u2581reading"], "negToks": ["aceae", "\u2581anche", "\u2581restaur", "\u2581curious", "package"], "posVal": [0.9375, 0.9375, 0.875, 0.875, 0.75], "negVal": [-0.8125, -0.6875, -0.6875, -0.6875, -0.6875], "lossEffect": -0.0, "uColor": "rgb(255,255,255)"}, {"tok": "\u2581code", "tokID": 3464, "tokenLogit": 0.0014, "isBold": false}, {"tok": "\u2581to", "tokID": 1066, "tokenLogit": 0.0012, "isBold": false, "featAct": 4.0625, "bgColor": "#fff3e5"}, {"tok": "\u2581answer", "tokID": 5140, "tokenLogit": 0.0005, "isBold": false, "featAct": 2.7969, "bgColor": "#fff7ed", "posToks": ["\u2581read", "\u2581Read", "\u2581sunlight", "Read", "\u2581write"], "negToks": ["\u2581fals", "aceae", "\u2581pione", "\u2581curious", "package"], "posVal": [0.75, 0.6875, 0.625, 0.625, 0.625], "negVal": [-0.625, -0.625, -0.5625, -0.5625, -0.5625], "lossEffect": -0.0625, "uColor": "rgb(239,239,255)"}], [{"tok": "\u2581Read", "tokID": 5707, "tokenLogit": 0.0087, "isBold": false, "featAct": 38.75, "bgColor": "#ff8c00", "posToks": ["\u2581utter", "\u2581ende", "agn", "ably", "ble"], "negToks": ["\u2581Sak", "\u2581Tam", "\u2581Ly", "\u2581McK", "\u2581logo"], "posVal": [1.0625, 1.0, 0.875, 0.8125, 0.8125], "negVal": [-1.0, -0.9375, -0.9375, -0.9375, -0.9375], "lossEffect": -0.625, "uColor": "rgb(95,95,255)"}, {"tok": "\u2581the", "tokID": 1040, "tokenLogit": 0.0003, "isBold": false, "featAct": 21.75, "bgColor": "#ffbf70", "posToks": ["\u2581read", "\u2581Read", "Read", "\u2581reads", "\u2581write"], "negToks": ["\u2581curious", "\u2581anche", "aceae", "\u2581kennis", "river"], "posVal": [2.0625, 1.875, 1.75, 1.5625, 1.5625], "negVal": [-1.5, -1.375, -1.25, -1.25, -1.25], "lossEffect": -0.0, "uColor": "rgb(255,255,255)"}, {"tok": "\u2581following", "tokID": 3064, "tokenLogit": 0.0004, "isBold": false, "featAct": 4.9688, "bgColor": "#fff1df", "posToks": ["\u2581Read", "Read", "\u2581read", "\u2581write", "velle"], "negToks": ["aceae", "\u2581fals", "\u2581cos\u00ec", "package", "SYMBOL"], "posVal": [1.5, 1.4375, 1.4375, 1.3125, 1.25], "negVal": [-1.4375, -1.375, -1.375, -1.3125, -1.25], "lossEffect": -0.0, "uColor": "rgb(255,255,255)"}, {"tok": "\u2581passage", "tokID": 13048, "tokenLogit": 0.0025, "isBold": false, "featAct": 5.8125, "bgColor": "#ffeed9", "posToks": ["\u2581read", "\u2581Read", "Read", "\u2581write", "\u2581reading"], "negToks": ["aceae", "\u2581curious", "package", "++]", "\u2581anche"], "posVal": [1.0, 1.0, 0.9375, 0.875, 0.75], "negVal": [-0.875, -0.75, -0.75, -0.75, -0.75], "lossEffect": -0.3125, "uColor": "rgb(175,175,255)"}, {"tok": "\u2581and", "tokID": 1072, "tokenLogit": -0.0001, "isBold": false, "posToks": ["\u2581read", "\u2581Read", "Read", "\u2581write", "\u2581Pitt"], "negToks": ["\u2581fals", "aceae", "\u2581\u017e", "\u2581anche", "\u00f6r"], "posVal": [0.9375, 0.875, 0.875, 0.8125, 0.75], "negVal": [-0.8125, -0.8125, -0.6875, -0.6875, -0.6875], "lossEffect": -0.0625, "uColor": "rgb(239,239,255)"}, {"tok": "\u2581then", "tokID": 1636, "tokenLogit": 0.0018, "isBold": true, "featAct": 5.7812, "bgColor": "#ffeed9"}, {"tok": "\u2581write", "tokID": 4092, "tokenLogit": 0.0078, "isBold": false, "featAct": 4.4375, "bgColor": "#fff2e2", "posToks": ["Read", "\u2581read", "\u2581Denver", "\u2581Read", "\u2581write"], "negToks": ["\u2581fals", "aceae", "SYMBOL", "\u2581pap", "package"], "posVal": [0.8125, 0.8125, 0.75, 0.75, 0.75], "negVal": [-0.75, -0.6875, -0.625, -0.625, -0.625], "lossEffect": -0.75, "uColor": "rgb(63,63,255)"}, {"tok": "\u2581python", "tokID": 22734, "tokenLogit": -0.0001, "isBold": false, "posToks": ["\u2581read", "\u2581Read", "Read", "\u2581write", "\u2581reading"], "negToks": ["aceae", "\u2581anche", "\u2581restaur", "\u2581curious", "package"], "posVal": [0.9375, 0.9375, 0.875, 0.875, 0.75], "negVal": [-0.8125, -0.6875, -0.6875, -0.6875, -0.6875], "lossEffect": -0.0, "uColor": "rgb(255,255,255)"}, {"tok": "\u2581code", "tokID": 3464, "tokenLogit": 0.0014, "isBold": false}, {"tok": "\u2581to", "tokID": 1066, "tokenLogit": 0.0012, "isBold": false, "featAct": 4.0625, "bgColor": "#fff3e5"}, {"tok": "\u2581answer", "tokID": 5140, "tokenLogit": 0.0005, "isBold": false, "featAct": 2.7969, "bgColor": "#fff7ed", "posToks": ["\u2581read", "\u2581Read", "\u2581sunlight", "Read", "\u2581write"], "negToks": ["\u2581fals", "aceae", "\u2581pione", "\u2581curious", "package"], "posVal": [0.75, 0.6875, 0.625, 0.625, 0.625], "negVal": [-0.625, -0.625, -0.5625, -0.5625, -0.5625], "lossEffect": -0.0625, "uColor": "rgb(239,239,255)"}], [{"tok": "\u2581Read", "tokID": 5707, "tokenLogit": 0.0087, "isBold": false, "featAct": 38.75, "bgColor": "#ff8c00", "posToks": ["\u2581utter", "\u2581ende", "agn", "ably", "ble"], "negToks": ["\u2581Sak", "\u2581Tam", "\u2581Ly", "\u2581McK", "\u2581logo"], "posVal": [1.0625, 1.0, 0.875, 0.8125, 0.8125], "negVal": [-1.0, -0.9375, -0.9375, -0.9375, -0.9375], "lossEffect": -0.625, "uColor": "rgb(95,95,255)"}, {"tok": "\u2581the", "tokID": 1040, "tokenLogit": 0.0003, "isBold": false, "featAct": 21.75, "bgColor": "#ffbf70", "posToks": ["\u2581read", "\u2581Read", "Read", "\u2581reads", "\u2581write"], "negToks": ["\u2581curious", "\u2581anche", "aceae", "\u2581kennis", "river"], "posVal": [2.0625, 1.875, 1.75, 1.5625, 1.5625], "negVal": [-1.5, -1.375, -1.25, -1.25, -1.25], "lossEffect": -0.0, "uColor": "rgb(255,255,255)"}, {"tok": "\u2581following", "tokID": 3064, "tokenLogit": 0.0004, "isBold": false, "featAct": 4.9688, "bgColor": "#fff1df", "posToks": ["\u2581Read", "Read", "\u2581read", "\u2581write", "velle"], "negToks": ["aceae", "\u2581fals", "\u2581cos\u00ec", "package", "SYMBOL"], "posVal": [1.5, 1.4375, 1.4375, 1.3125, 1.25], "negVal": [-1.4375, -1.375, -1.375, -1.3125, -1.25], "lossEffect": -0.0, "uColor": "rgb(255,255,255)"}, {"tok": "\u2581passage", "tokID": 13048, "tokenLogit": 0.0025, "isBold": false, "featAct": 5.8125, "bgColor": "#ffeed9", "posToks": ["\u2581read", "\u2581Read", "Read", "\u2581write", "\u2581reading"], "negToks": ["aceae", "\u2581curious", "package", "++]", "\u2581anche"], "posVal": [1.0, 1.0, 0.9375, 0.875, 0.75], "negVal": [-0.875, -0.75, -0.75, -0.75, -0.75], "lossEffect": -0.3125, "uColor": "rgb(175,175,255)"}, {"tok": "\u2581and", "tokID": 1072, "tokenLogit": -0.0001, "isBold": false, "posToks": ["\u2581read", "\u2581Read", "Read", "\u2581write", "\u2581Pitt"], "negToks": ["\u2581fals", "aceae", "\u2581\u017e", "\u2581anche", "\u00f6r"], "posVal": [0.9375, 0.875, 0.875, 0.8125, 0.75], "negVal": [-0.8125, -0.8125, -0.6875, -0.6875, -0.6875], "lossEffect": -0.0625, "uColor": "rgb(239,239,255)"}, {"tok": "\u2581then", "tokID": 1636, "tokenLogit": 0.0018, "isBold": true, "featAct": 5.7812, "bgColor": "#ffeed9"}, {"tok": "\u2581write", "tokID": 4092, "tokenLogit": 0.0078, "isBold": false, "featAct": 4.4375, "bgColor": "#fff2e2", "posToks": ["Read", "\u2581read", "\u2581Denver", "\u2581Read", "\u2581write"], "negToks": ["\u2581fals", "aceae", "SYMBOL", "\u2581pap", "package"], "posVal": [0.8125, 0.8125, 0.75, 0.75, 0.75], "negVal": [-0.75, -0.6875, -0.625, -0.625, -0.625], "lossEffect": -0.75, "uColor": "rgb(63,63,255)"}, {"tok": "\u2581python", "tokID": 22734, "tokenLogit": -0.0001, "isBold": false, "posToks": ["\u2581read", "\u2581Read", "Read", "\u2581write", "\u2581reading"], "negToks": ["aceae", "\u2581anche", "\u2581restaur", "\u2581curious", "package"], "posVal": [0.9375, 0.9375, 0.875, 0.875, 0.75], "negVal": [-0.8125, -0.6875, -0.6875, -0.6875, -0.6875], "lossEffect": -0.0, "uColor": "rgb(255,255,255)"}, {"tok": "\u2581code", "tokID": 3464, "tokenLogit": 0.0014, "isBold": false}, {"tok": "\u2581to", "tokID": 1066, "tokenLogit": 0.0012, "isBold": false, "featAct": 4.0625, "bgColor": "#fff3e5"}, {"tok": "\u2581answer", "tokID": 5140, "tokenLogit": 0.0005, "isBold": false, "featAct": 2.7969, "bgColor": "#fff7ed", "posToks": ["\u2581read", "\u2581Read", "\u2581sunlight", "Read", "\u2581write"], "negToks": ["\u2581fals", "aceae", "\u2581pione", "\u2581curious", "package"], "posVal": [0.75, 0.6875, 0.625, 0.625, 0.625], "negVal": [-0.625, -0.625, -0.5625, -0.5625, -0.5625], "lossEffect": -0.0625, "uColor": "rgb(239,239,255)"}], [{"tok": "\u2581Read", "tokID": 5707, "tokenLogit": 0.0087, "isBold": false, "featAct": 38.75, "bgColor": "#ff8c00", "posToks": ["\u2581utter", "\u2581ende", "agn", "ably", "ble"], "negToks": ["\u2581Sak", "\u2581Tam", "\u2581Ly", "\u2581McK", "\u2581logo"], "posVal": [1.0625, 1.0, 0.875, 0.8125, 0.8125], "negVal": [-1.0, -0.9375, -0.9375, -0.9375, -0.9375], "lossEffect": -0.625, "uColor": "rgb(95,95,255)"}, {"tok": "\u2581the", "tokID": 1040, "tokenLogit": 0.0003, "isBold": false, "featAct": 21.75, "bgColor": "#ffbf70", "posToks": ["\u2581read", "\u2581Read", "Read", "\u2581reads", "\u2581write"], "negToks": ["\u2581curious", "\u2581anche", "aceae", "\u2581kennis", "river"], "posVal": [2.0625, 1.875, 1.75, 1.5625, 1.5625], "negVal": [-1.5, -1.375, -1.25, -1.25, -1.25], "lossEffect": -0.0, "uColor": "rgb(255,255,255)"}, {"tok": "\u2581following", "tokID": 3064, "tokenLogit": 0.0004, "isBold": false, "featAct": 4.9688, "bgColor": "#fff1df", "posToks": ["\u2581Read", "Read", "\u2581read", "\u2581write", "velle"], "negToks": ["aceae", "\u2581fals", "\u2581cos\u00ec", "package", "SYMBOL"], "posVal": [1.5, 1.4375, 1.4375, 1.3125, 1.25], "negVal": [-1.4375, -1.375, -1.375, -1.3125, -1.25], "lossEffect": -0.0, "uColor": "rgb(255,255,255)"}, {"tok": "\u2581passage", "tokID": 13048, "tokenLogit": 0.0025, "isBold": false, "featAct": 5.8125, "bgColor": "#ffeed9", "posToks": ["\u2581read", "\u2581Read", "Read", "\u2581write", "\u2581reading"], "negToks": ["aceae", "\u2581curious", "package", "++]", "\u2581anche"], "posVal": [1.0, 1.0, 0.9375, 0.875, 0.75], "negVal": [-0.875, -0.75, -0.75, -0.75, -0.75], "lossEffect": -0.3125, "uColor": "rgb(175,175,255)"}, {"tok": "\u2581and", "tokID": 1072, "tokenLogit": -0.0001, "isBold": false, "posToks": ["\u2581read", "\u2581Read", "Read", "\u2581write", "\u2581Pitt"], "negToks": ["\u2581fals", "aceae", "\u2581\u017e", "\u2581anche", "\u00f6r"], "posVal": [0.9375, 0.875, 0.875, 0.8125, 0.75], "negVal": [-0.8125, -0.8125, -0.6875, -0.6875, -0.6875], "lossEffect": -0.0625, "uColor": "rgb(239,239,255)"}, {"tok": "\u2581then", "tokID": 1636, "tokenLogit": 0.0018, "isBold": true, "featAct": 5.7812, "bgColor": "#ffeed9"}, {"tok": "\u2581write", "tokID": 4092, "tokenLogit": 0.0078, "isBold": false, "featAct": 4.4375, "bgColor": "#fff2e2", "posToks": ["Read", "\u2581read", "\u2581Denver", "\u2581Read", "\u2581write"], "negToks": ["\u2581fals", "aceae", "SYMBOL", "\u2581pap", "package"], "posVal": [0.8125, 0.8125, 0.75, 0.75, 0.75], "negVal": [-0.75, -0.6875, -0.625, -0.625, -0.625], "lossEffect": -0.75, "uColor": "rgb(63,63,255)"}, {"tok": "\u2581python", "tokID": 22734, "tokenLogit": -0.0001, "isBold": false, "posToks": ["\u2581read", "\u2581Read", "Read", "\u2581write", "\u2581reading"], "negToks": ["aceae", "\u2581anche", "\u2581restaur", "\u2581curious", "package"], "posVal": [0.9375, 0.9375, 0.875, 0.875, 0.75], "negVal": [-0.8125, -0.6875, -0.6875, -0.6875, -0.6875], "lossEffect": -0.0, "uColor": "rgb(255,255,255)"}, {"tok": "\u2581code", "tokID": 3464, "tokenLogit": 0.0014, "isBold": false}, {"tok": "\u2581to", "tokID": 1066, "tokenLogit": 0.0012, "isBold": false, "featAct": 4.0625, "bgColor": "#fff3e5"}, {"tok": "\u2581answer", "tokID": 5140, "tokenLogit": 0.0005, "isBold": false, "featAct": 2.7969, "bgColor": "#fff7ed", "posToks": ["\u2581read", "\u2581Read", "\u2581sunlight", "Read", "\u2581write"], "negToks": ["\u2581fals", "aceae", "\u2581pione", "\u2581curious", "package"], "posVal": [0.75, 0.6875, 0.625, 0.625, 0.625], "negVal": [-0.625, -0.625, -0.5625, -0.5625, -0.5625], "lossEffect": -0.0625, "uColor": "rgb(239,239,255)"}], [{"tok": "\u2581Read", "tokID": 5707, "tokenLogit": 0.0087, "isBold": false, "featAct": 38.75, "bgColor": "#ff8c00", "posToks": ["\u2581utter", "\u2581ende", "agn", "ably", "ble"], "negToks": ["\u2581Sak", "\u2581Tam", "\u2581Ly", "\u2581McK", "\u2581logo"], "posVal": [1.0625, 1.0, 0.875, 0.8125, 0.8125], "negVal": [-1.0, -0.9375, -0.9375, -0.9375, -0.9375], "lossEffect": -0.625, "uColor": "rgb(95,95,255)"}, {"tok": "\u2581the", "tokID": 1040, "tokenLogit": 0.0003, "isBold": false, "featAct": 21.75, "bgColor": "#ffbf70", "posToks": ["\u2581read", "\u2581Read", "Read", "\u2581reads", "\u2581write"], "negToks": ["\u2581curious", "\u2581anche", "aceae", "\u2581kennis", "river"], "posVal": [2.0625, 1.875, 1.75, 1.5625, 1.5625], "negVal": [-1.5, -1.375, -1.25, -1.25, -1.25], "lossEffect": -0.0, "uColor": "rgb(255,255,255)"}, {"tok": "\u2581following", "tokID": 3064, "tokenLogit": 0.0004, "isBold": false, "featAct": 4.9688, "bgColor": "#fff1df", "posToks": ["\u2581Read", "Read", "\u2581read", "\u2581write", "velle"], "negToks": ["aceae", "\u2581fals", "\u2581cos\u00ec", "package", "SYMBOL"], "posVal": [1.5, 1.4375, 1.4375, 1.3125, 1.25], "negVal": [-1.4375, -1.375, -1.375, -1.3125, -1.25], "lossEffect": -0.0, "uColor": "rgb(255,255,255)"}, {"tok": "\u2581passage", "tokID": 13048, "tokenLogit": 0.0025, "isBold": false, "featAct": 5.8125, "bgColor": "#ffeed9", "posToks": ["\u2581read", "\u2581Read", "Read", "\u2581write", "\u2581reading"], "negToks": ["aceae", "\u2581curious", "package", "++]", "\u2581anche"], "posVal": [1.0, 1.0, 0.9375, 0.875, 0.75], "negVal": [-0.875, -0.75, -0.75, -0.75, -0.75], "lossEffect": -0.3125, "uColor": "rgb(175,175,255)"}, {"tok": "\u2581and", "tokID": 1072, "tokenLogit": -0.0001, "isBold": false, "posToks": ["\u2581read", "\u2581Read", "Read", "\u2581write", "\u2581Pitt"], "negToks": ["\u2581fals", "aceae", "\u2581\u017e", "\u2581anche", "\u00f6r"], "posVal": [0.9375, 0.875, 0.875, 0.8125, 0.75], "negVal": [-0.8125, -0.8125, -0.6875, -0.6875, -0.6875], "lossEffect": -0.0625, "uColor": "rgb(239,239,255)"}, {"tok": "\u2581then", "tokID": 1636, "tokenLogit": 0.0018, "isBold": true, "featAct": 5.7812, "bgColor": "#ffeed9"}, {"tok": "\u2581write", "tokID": 4092, "tokenLogit": 0.0078, "isBold": false, "featAct": 4.4375, "bgColor": "#fff2e2", "posToks": ["Read", "\u2581read", "\u2581Denver", "\u2581Read", "\u2581write"], "negToks": ["\u2581fals", "aceae", "SYMBOL", "\u2581pap", "package"], "posVal": [0.8125, 0.8125, 0.75, 0.75, 0.75], "negVal": [-0.75, -0.6875, -0.625, -0.625, -0.625], "lossEffect": -0.75, "uColor": "rgb(63,63,255)"}, {"tok": "\u2581python", "tokID": 22734, "tokenLogit": -0.0001, "isBold": false, "posToks": ["\u2581read", "\u2581Read", "Read", "\u2581write", "\u2581reading"], "negToks": ["aceae", "\u2581anche", "\u2581restaur", "\u2581curious", "package"], "posVal": [0.9375, 0.9375, 0.875, 0.875, 0.75], "negVal": [-0.8125, -0.6875, -0.6875, -0.6875, -0.6875], "lossEffect": -0.0, "uColor": "rgb(255,255,255)"}, {"tok": "\u2581code", "tokID": 3464, "tokenLogit": 0.0014, "isBold": false}, {"tok": "\u2581to", "tokID": 1066, "tokenLogit": 0.0012, "isBold": false, "featAct": 4.0625, "bgColor": "#fff3e5"}, {"tok": "\u2581answer", "tokID": 5140, "tokenLogit": 0.0005, "isBold": false, "featAct": 2.7969, "bgColor": "#fff7ed", "posToks": ["\u2581read", "\u2581Read", "\u2581sunlight", "Read", "\u2581write"], "negToks": ["\u2581fals", "aceae", "\u2581pione", "\u2581curious", "package"], "posVal": [0.75, 0.6875, 0.625, 0.625, 0.625], "negVal": [-0.625, -0.625, -0.5625, -0.5625, -0.5625], "lossEffect": -0.0625, "uColor": "rgb(239,239,255)"}], [{"tok": "\u2581Read", "tokID": 5707, "tokenLogit": 0.0087, "isBold": false, "featAct": 38.75, "bgColor": "#ff8c00", "posToks": ["\u2581utter", "\u2581ende", "agn", "ably", "ble"], "negToks": ["\u2581Sak", "\u2581Tam", "\u2581Ly", "\u2581McK", "\u2581logo"], "posVal": [1.0625, 1.0, 0.875, 0.8125, 0.8125], "negVal": [-1.0, -0.9375, -0.9375, -0.9375, -0.9375], "lossEffect": -0.625, "uColor": "rgb(95,95,255)"}, {"tok": "\u2581the", "tokID": 1040, "tokenLogit": 0.0003, "isBold": false, "featAct": 21.75, "bgColor": "#ffbf70", "posToks": ["\u2581read", "\u2581Read", "Read", "\u2581reads", "\u2581write"], "negToks": ["\u2581curious", "\u2581anche", "aceae", "\u2581kennis", "river"], "posVal": [2.0625, 1.875, 1.75, 1.5625, 1.5625], "negVal": [-1.5, -1.375, -1.25, -1.25, -1.25], "lossEffect": -0.0, "uColor": "rgb(255,255,255)"}, {"tok": "\u2581following", "tokID": 3064, "tokenLogit": 0.0004, "isBold": false, "featAct": 4.9688, "bgColor": "#fff1df", "posToks": ["\u2581Read", "Read", "\u2581read", "\u2581write", "velle"], "negToks": ["aceae", "\u2581fals", "\u2581cos\u00ec", "package", "SYMBOL"], "posVal": [1.5, 1.4375, 1.4375, 1.3125, 1.25], "negVal": [-1.4375, -1.375, -1.375, -1.3125, -1.25], "lossEffect": -0.0, "uColor": "rgb(255,255,255)"}, {"tok": "\u2581passage", "tokID": 13048, "tokenLogit": 0.0025, "isBold": false, "featAct": 5.8125, "bgColor": "#ffeed9", "posToks": ["\u2581read", "\u2581Read", "Read", "\u2581write", "\u2581reading"], "negToks": ["aceae", "\u2581curious", "package", "++]", "\u2581anche"], "posVal": [1.0, 1.0, 0.9375, 0.875, 0.75], "negVal": [-0.875, -0.75, -0.75, -0.75, -0.75], "lossEffect": -0.3125, "uColor": "rgb(175,175,255)"}, {"tok": "\u2581and", "tokID": 1072, "tokenLogit": -0.0001, "isBold": false, "posToks": ["\u2581read", "\u2581Read", "Read", "\u2581write", "\u2581Pitt"], "negToks": ["\u2581fals", "aceae", "\u2581\u017e", "\u2581anche", "\u00f6r"], "posVal": [0.9375, 0.875, 0.875, 0.8125, 0.75], "negVal": [-0.8125, -0.8125, -0.6875, -0.6875, -0.6875], "lossEffect": -0.0625, "uColor": "rgb(239,239,255)"}, {"tok": "\u2581then", "tokID": 1636, "tokenLogit": 0.0018, "isBold": true, "featAct": 5.7812, "bgColor": "#ffeed9"}, {"tok": "\u2581write", "tokID": 4092, "tokenLogit": 0.0078, "isBold": false, "featAct": 4.4375, "bgColor": "#fff2e2", "posToks": ["Read", "\u2581read", "\u2581Denver", "\u2581Read", "\u2581write"], "negToks": ["\u2581fals", "aceae", "SYMBOL", "\u2581pap", "package"], "posVal": [0.8125, 0.8125, 0.75, 0.75, 0.75], "negVal": [-0.75, -0.6875, -0.625, -0.625, -0.625], "lossEffect": -0.75, "uColor": "rgb(63,63,255)"}, {"tok": "\u2581python", "tokID": 22734, "tokenLogit": -0.0001, "isBold": false, "posToks": ["\u2581read", "\u2581Read", "Read", "\u2581write", "\u2581reading"], "negToks": ["aceae", "\u2581anche", "\u2581restaur", "\u2581curious", "package"], "posVal": [0.9375, 0.9375, 0.875, 0.875, 0.75], "negVal": [-0.8125, -0.6875, -0.6875, -0.6875, -0.6875], "lossEffect": -0.0, "uColor": "rgb(255,255,255)"}, {"tok": "\u2581code", "tokID": 3464, "tokenLogit": 0.0014, "isBold": false}, {"tok": "\u2581to", "tokID": 1066, "tokenLogit": 0.0012, "isBold": false, "featAct": 4.0625, "bgColor": "#fff3e5"}, {"tok": "\u2581answer", "tokID": 5140, "tokenLogit": 0.0005, "isBold": false, "featAct": 2.7969, "bgColor": "#fff7ed", "posToks": ["\u2581read", "\u2581Read", "\u2581sunlight", "Read", "\u2581write"], "negToks": ["\u2581fals", "aceae", "\u2581pione", "\u2581curious", "package"], "posVal": [0.75, 0.6875, 0.625, 0.625, 0.625], "negVal": [-0.625, -0.625, -0.5625, -0.5625, -0.5625], "lossEffect": -0.0625, "uColor": "rgb(239,239,255)"}], [{"tok": "\u2581Read", "tokID": 5707, "tokenLogit": 0.0087, "isBold": false, "featAct": 38.75, "bgColor": "#ff8c00", "posToks": ["\u2581utter", "\u2581ende", "agn", "ably", "ble"], "negToks": ["\u2581Sak", "\u2581Tam", "\u2581Ly", "\u2581McK", "\u2581logo"], "posVal": [1.0625, 1.0, 0.875, 0.8125, 0.8125], "negVal": [-1.0, -0.9375, -0.9375, -0.9375, -0.9375], "lossEffect": -0.625, "uColor": "rgb(95,95,255)"}, {"tok": "\u2581the", "tokID": 1040, "tokenLogit": 0.0003, "isBold": false, "featAct": 21.75, "bgColor": "#ffbf70", "posToks": ["\u2581read", "\u2581Read", "Read", "\u2581reads", "\u2581write"], "negToks": ["\u2581curious", "\u2581anche", "aceae", "\u2581kennis", "river"], "posVal": [2.0625, 1.875, 1.75, 1.5625, 1.5625], "negVal": [-1.5, -1.375, -1.25, -1.25, -1.25], "lossEffect": -0.0, "uColor": "rgb(255,255,255)"}, {"tok": "\u2581following", "tokID": 3064, "tokenLogit": 0.0004, "isBold": false, "featAct": 4.9688, "bgColor": "#fff1df", "posToks": ["\u2581Read", "Read", "\u2581read", "\u2581write", "velle"], "negToks": ["aceae", "\u2581fals", "\u2581cos\u00ec", "package", "SYMBOL"], "posVal": [1.5, 1.4375, 1.4375, 1.3125, 1.25], "negVal": [-1.4375, -1.375, -1.375, -1.3125, -1.25], "lossEffect": -0.0, "uColor": "rgb(255,255,255)"}, {"tok": "\u2581passage", "tokID": 13048, "tokenLogit": 0.0025, "isBold": false, "featAct": 5.8125, "bgColor": "#ffeed9", "posToks": ["\u2581read", "\u2581Read", "Read", "\u2581write", "\u2581reading"], "negToks": ["aceae", "\u2581curious", "package", "++]", "\u2581anche"], "posVal": [1.0, 1.0, 0.9375, 0.875, 0.75], "negVal": [-0.875, -0.75, -0.75, -0.75, -0.75], "lossEffect": -0.3125, "uColor": "rgb(175,175,255)"}, {"tok": "\u2581and", "tokID": 1072, "tokenLogit": -0.0001, "isBold": false, "posToks": ["\u2581read", "\u2581Read", "Read", "\u2581write", "\u2581Pitt"], "negToks": ["\u2581fals", "aceae", "\u2581\u017e", "\u2581anche", "\u00f6r"], "posVal": [0.9375, 0.875, 0.875, 0.8125, 0.75], "negVal": [-0.8125, -0.8125, -0.6875, -0.6875, -0.6875], "lossEffect": -0.0625, "uColor": "rgb(239,239,255)"}, {"tok": "\u2581then", "tokID": 1636, "tokenLogit": 0.0018, "isBold": true, "featAct": 5.7812, "bgColor": "#ffeed9"}, {"tok": "\u2581write", "tokID": 4092, "tokenLogit": 0.0078, "isBold": false, "featAct": 4.4375, "bgColor": "#fff2e2", "posToks": ["Read", "\u2581read", "\u2581Denver", "\u2581Read", "\u2581write"], "negToks": ["\u2581fals", "aceae", "SYMBOL", "\u2581pap", "package"], "posVal": [0.8125, 0.8125, 0.75, 0.75, 0.75], "negVal": [-0.75, -0.6875, -0.625, -0.625, -0.625], "lossEffect": -0.75, "uColor": "rgb(63,63,255)"}, {"tok": "\u2581python", "tokID": 22734, "tokenLogit": -0.0001, "isBold": false, "posToks": ["\u2581read", "\u2581Read", "Read", "\u2581write", "\u2581reading"], "negToks": ["aceae", "\u2581anche", "\u2581restaur", "\u2581curious", "package"], "posVal": [0.9375, 0.9375, 0.875, 0.875, 0.75], "negVal": [-0.8125, -0.6875, -0.6875, -0.6875, -0.6875], "lossEffect": -0.0, "uColor": "rgb(255,255,255)"}, {"tok": "\u2581code", "tokID": 3464, "tokenLogit": 0.0014, "isBold": false}, {"tok": "\u2581to", "tokID": 1066, "tokenLogit": 0.0012, "isBold": false, "featAct": 4.0625, "bgColor": "#fff3e5"}, {"tok": "\u2581answer", "tokID": 5140, "tokenLogit": 0.0005, "isBold": false, "featAct": 2.7969, "bgColor": "#fff7ed", "posToks": ["\u2581read", "\u2581Read", "\u2581sunlight", "Read", "\u2581write"], "negToks": ["\u2581fals", "aceae", "\u2581pione", "\u2581curious", "package"], "posVal": [0.75, 0.6875, 0.625, 0.625, 0.625], "negVal": [-0.625, -0.625, -0.5625, -0.5625, -0.5625], "lossEffect": -0.0625, "uColor": "rgb(239,239,255)"}], [{"tok": "\u2581Read", "tokID": 5707, "tokenLogit": 0.0087, "isBold": false, "featAct": 38.75, "bgColor": "#ff8c00", "posToks": ["\u2581utter", "\u2581ende", "agn", "ably", "ble"], "negToks": ["\u2581Sak", "\u2581Tam", "\u2581Ly", "\u2581McK", "\u2581logo"], "posVal": [1.0625, 1.0, 0.875, 0.8125, 0.8125], "negVal": [-1.0, -0.9375, -0.9375, -0.9375, -0.9375], "lossEffect": -0.625, "uColor": "rgb(95,95,255)"}, {"tok": "\u2581the", "tokID": 1040, "tokenLogit": 0.0003, "isBold": false, "featAct": 21.75, "bgColor": "#ffbf70", "posToks": ["\u2581read", "\u2581Read", "Read", "\u2581reads", "\u2581write"], "negToks": ["\u2581curious", "\u2581anche", "aceae", "\u2581kennis", "river"], "posVal": [2.0625, 1.875, 1.75, 1.5625, 1.5625], "negVal": [-1.5, -1.375, -1.25, -1.25, -1.25], "lossEffect": -0.0, "uColor": "rgb(255,255,255)"}, {"tok": "\u2581following", "tokID": 3064, "tokenLogit": 0.0004, "isBold": false, "featAct": 4.9688, "bgColor": "#fff1df", "posToks": ["\u2581Read", "Read", "\u2581read", "\u2581write", "velle"], "negToks": ["aceae", "\u2581fals", "\u2581cos\u00ec", "package", "SYMBOL"], "posVal": [1.5, 1.4375, 1.4375, 1.3125, 1.25], "negVal": [-1.4375, -1.375, -1.375, -1.3125, -1.25], "lossEffect": -0.0, "uColor": "rgb(255,255,255)"}, {"tok": "\u2581passage", "tokID": 13048, "tokenLogit": 0.0025, "isBold": false, "featAct": 5.8125, "bgColor": "#ffeed9", "posToks": ["\u2581read", "\u2581Read", "Read", "\u2581write", "\u2581reading"], "negToks": ["aceae", "\u2581curious", "package", "++]", "\u2581anche"], "posVal": [1.0, 1.0, 0.9375, 0.875, 0.75], "negVal": [-0.875, -0.75, -0.75, -0.75, -0.75], "lossEffect": -0.3125, "uColor": "rgb(175,175,255)"}, {"tok": "\u2581and", "tokID": 1072, "tokenLogit": -0.0001, "isBold": false, "posToks": ["\u2581read", "\u2581Read", "Read", "\u2581write", "\u2581Pitt"], "negToks": ["\u2581fals", "aceae", "\u2581\u017e", "\u2581anche", "\u00f6r"], "posVal": [0.9375, 0.875, 0.875, 0.8125, 0.75], "negVal": [-0.8125, -0.8125, -0.6875, -0.6875, -0.6875], "lossEffect": -0.0625, "uColor": "rgb(239,239,255)"}, {"tok": "\u2581then", "tokID": 1636, "tokenLogit": 0.0018, "isBold": true, "featAct": 5.7812, "bgColor": "#ffeed9"}, {"tok": "\u2581write", "tokID": 4092, "tokenLogit": 0.0078, "isBold": false, "featAct": 4.4375, "bgColor": "#fff2e2", "posToks": ["Read", "\u2581read", "\u2581Denver", "\u2581Read", "\u2581write"], "negToks": ["\u2581fals", "aceae", "SYMBOL", "\u2581pap", "package"], "posVal": [0.8125, 0.8125, 0.75, 0.75, 0.75], "negVal": [-0.75, -0.6875, -0.625, -0.625, -0.625], "lossEffect": -0.75, "uColor": "rgb(63,63,255)"}, {"tok": "\u2581python", "tokID": 22734, "tokenLogit": -0.0001, "isBold": false, "posToks": ["\u2581read", "\u2581Read", "Read", "\u2581write", "\u2581reading"], "negToks": ["aceae", "\u2581anche", "\u2581restaur", "\u2581curious", "package"], "posVal": [0.9375, 0.9375, 0.875, 0.875, 0.75], "negVal": [-0.8125, -0.6875, -0.6875, -0.6875, -0.6875], "lossEffect": -0.0, "uColor": "rgb(255,255,255)"}, {"tok": "\u2581code", "tokID": 3464, "tokenLogit": 0.0014, "isBold": false}, {"tok": "\u2581to", "tokID": 1066, "tokenLogit": 0.0012, "isBold": false, "featAct": 4.0625, "bgColor": "#fff3e5"}, {"tok": "\u2581answer", "tokID": 5140, "tokenLogit": 0.0005, "isBold": false, "featAct": 2.7969, "bgColor": "#fff7ed", "posToks": ["\u2581read", "\u2581Read", "\u2581sunlight", "Read", "\u2581write"], "negToks": ["\u2581fals", "aceae", "\u2581pione", "\u2581curious", "package"], "posVal": [0.75, 0.6875, 0.625, 0.625, 0.625], "negVal": [-0.625, -0.625, -0.5625, -0.5625, -0.5625], "lossEffect": -0.0625, "uColor": "rgb(239,239,255)"}]], "idSuffix": "0", "title": "TOP ACTIVATIONS<br>MAX = 38.750"}, "seq-group-1-8": {"data": [[{"tok": "ized", "tokID": 2100, "tokenLogit": 0.0004, "isBold": false}, {"tok": "\u2581firm", "tokID": 6567, "tokenLogit": 0.0005, "isBold": false}, {"tok": "\u2581commit", "tokID": 6221, "tokenLogit": -0.0018, "isBold": false}, {"tok": "ments", "tokID": 2107, "tokenLogit": 0.0005, "isBold": false}, {"tok": "\u2581,", "tokID": 1968, "tokenLogit": -0.0, "isBold": false}, {"tok": "\u2581and", "tokID": 1072, "tokenLogit": -0.0001, "isBold": true, "featAct": 7.875, "bgColor": "#ffe8cb"}, {"tok": "\u2581written", "tokID": 5009, "tokenLogit": 0.0042, "isBold": false, "posToks": ["\u5f88", "\u2581subtle", "\u2581read", "\u4e34", "\u2581write"], "negToks": ["()}", "++]", "\u2581v\u00e1l", "\u2581curious", "\u2581\\]"], "posVal": [0.875, 0.875, 0.875, 0.8125, 0.8125], "negVal": [-0.9375, -0.875, -0.8125, -0.8125, -0.75], "lossEffect": -0.4375, "uColor": "rgb(143,143,255)"}, {"tok": "\u2581loan", "tokID": 10744, "tokenLogit": -0.0003, "isBold": false}, {"tok": "\u2581com", "tokID": 1200, "tokenLogit": 0.001, "isBold": false, "featAct": 3.3125, "bgColor": "#fff6ea"}, {"tok": "-", "tokID": 29501, "tokenLogit": 0.001, "isBold": false, "posToks": ["\u2581read", "Read", "\u2581Read", "Dev", "\u2581write"], "negToks": ["\u2581fals", "package", "\u2581meant", "\u2581anche", "\u2581pel"], "posVal": [0.8125, 0.75, 0.6875, 0.625, 0.625], "negVal": [-0.6875, -0.5625, -0.5625, -0.5625, -0.5625], "lossEffect": -0.0625, "uColor": "rgb(239,239,255)"}, {"tok": "\u2581mit", "tokID": 3135, "tokenLogit": 0.0016, "isBold": false}], [{"tok": "\u2581)", "tokID": 1911, "tokenLogit": -0.0009, "isBold": false}, {"tok": "\u2581.", "tokID": 1610, "tokenLogit": 0.0011, "isBold": false}, {"tok": "<0x0A>", "tokID": 781, "tokenLogit": 0.001, "isBold": false}, {"tok": "the", "tokID": 2005, "tokenLogit": 0.0009, "isBold": false}, {"tok": "\u2581public", "tokID": 1566, "tokenLogit": 0.0022, "isBold": false}, {"tok": "\u2581may", "tokID": 1761, "tokenLogit": 0.0005, "isBold": true, "featAct": 10.1875, "bgColor": "#ffe1bc"}, {"tok": "\u2581read", "tokID": 1988, "tokenLogit": 0.0091, "isBold": false, "posToks": ["\u2581Read", "\u2581priorities", "Read", "\u5f88", "\u2581Nav"], "negToks": ["scious", "\u2581restaur", "connect", "\u2581curious", "\u2581alors"], "posVal": [0.875, 0.8125, 0.8125, 0.8125, 0.8125], "negVal": [-0.75, -0.75, -0.75, -0.75, -0.75], "lossEffect": -0.75, "uColor": "rgb(63,63,255)"}, {"tok": "\u2581and", "tokID": 1072, "tokenLogit": -0.0001, "isBold": false}, {"tok": "\u2581copy", "tokID": 3850, "tokenLogit": 0.0028, "isBold": false}, {"tok": "\u2581any", "tokID": 1475, "tokenLogit": -0.0001, "isBold": false}, {"tok": "\u2581materials", "tokID": 7837, "tokenLogit": -0.0025, "isBold": false}]], "idSuffix": "0", "title": "INTERVAL 7.750 - 11.625<br>CONTAINS 0.001%"}, "seq-group-1-9": {"data": [[{"tok": "\u2581such", "tokID": 2027, "tokenLogit": 0.0011, "isBold": false}, {"tok": "\u2581information", "tokID": 2639, "tokenLogit": -0.0012, "isBold": false}, {"tok": "\u2581technology", "tokID": 6282, "tokenLogit": -0.0042, "isBold": false, "featAct": 3.0781, "bgColor": "#fff6eb"}, {"tok": "\u2581activities", "tokID": 7058, "tokenLogit": -0.0016, "isBold": false, "posToks": ["\u2581Read", "\u2581read", "\u2581reading", "Read", "\u2581write"], "negToks": ["\u2581fals", "aceae", "\u2581curious", "\u2581\\]", "package"], "posVal": [0.6875, 0.6875, 0.5625, 0.5625, 0.5625], "negVal": [-0.625, -0.5625, -0.5625, -0.5, -0.5], "lossEffect": 0.0625, "uColor": "rgb(255,239,239)"}, {"tok": "\u2581by", "tokID": 1254, "tokenLogit": 0.0016, "isBold": false, "featAct": 4.0625, "bgColor": "#fff3e5"}, {"tok": "\u2581the", "tokID": 1040, "tokenLogit": 0.0003, "isBold": true, "featAct": 3.8906, "bgColor": "#fff4e6", "posToks": ["\u2581read", "\u2581Read", "Read", "\u2581write", "\u2581reading"], "negToks": ["\u2581fals", "aceae", "\u2581anche", "\u2581\\]", "package"], "posVal": [0.6875, 0.6875, 0.625, 0.5625, 0.5], "negVal": [-0.5625, -0.5625, -0.5, -0.5, -0.5], "lossEffect": -0.0625, "uColor": "rgb(239,239,255)"}, {"tok": "\u2581end", "tokID": 1716, "tokenLogit": 0.0019, "isBold": false, "featAct": 4.0, "bgColor": "#fff3e5", "posToks": ["\u2581read", "\u2581Read", "Read", "\u2581reading", "\u2581write"], "negToks": ["\u2581fals", "\u2581pione", "aceae", "\u2581anche", "package"], "posVal": [0.6875, 0.6875, 0.625, 0.5, 0.5], "negVal": [-0.5625, -0.5625, -0.5625, -0.5, -0.5], "lossEffect": -0.1875, "uColor": "rgb(207,207,255)"}, {"tok": "\u2581of", "tokID": 1070, "tokenLogit": 0.0003, "isBold": false, "posToks": ["\u2581read", "\u2581Read", "Read", "\u2581reading", "\u2581write"], "negToks": ["aceae", "\u1ed7", "\u2581Kamp", "\u2581technologies", "assets"], "posVal": [0.75, 0.75, 0.6875, 0.625, 0.625], "negVal": [-0.6875, -0.625, -0.625, -0.5625, -0.5625], "lossEffect": -0.0625, "uColor": "rgb(239,239,255)"}, {"tok": "\u2581fiscal", "tokID": 25705, "tokenLogit": 0.0017, "isBold": false}, {"tok": "\u2581", "tokID": 29473, "tokenLogit": -0.0001, "isBold": false}, {"tok": "2", "tokID": 29518, "tokenLogit": 0.0015, "isBold": false}], [{"tok": "\u2581net", "tokID": 3280, "tokenLogit": 0.0001, "isBold": false}, {"tok": "\u2581worth", "tokID": 5175, "tokenLogit": 0.002, "isBold": false}, {"tok": "\u2581of", "tokID": 1070, "tokenLogit": 0.0003, "isBold": false}, {"tok": "\u2581at", "tokID": 1206, "tokenLogit": 0.0013, "isBold": false, "featAct": 3.0, "bgColor": "#fff6ec"}, {"tok": "\u2581least", "tokID": 3197, "tokenLogit": 0.0011, "isBold": false, "featAct": 4.0938, "bgColor": "#fff3e4", "posToks": ["\u2581read", "\u2581Read", "\u2581write", "Read", "\u2581reading"], "negToks": ["aceae", "\u2581pione", "\u2581elabor", "\u2581curious", "\u2581\u043a\u0438"], "posVal": [0.625, 0.5625, 0.5625, 0.5625, 0.5], "negVal": [-0.625, -0.5625, -0.5, -0.5, -0.5], "lossEffect": -0.125, "uColor": "rgb(223,223,255)"}, {"tok": "\u2581$", "tokID": 1197, "tokenLogit": 0.0016, "isBold": true, "featAct": 4.2812, "bgColor": "#fff2e3", "posToks": ["\u2581Read", "Read", "\u2581read", "\u2581write", "\u2581reading"], "negToks": ["aceae", "\u2581curious", "Regex", "FilePath", "\u2581restaur"], "posVal": [0.8125, 0.75, 0.75, 0.625, 0.5625], "negVal": [-0.5625, -0.5625, -0.5625, -0.5625, -0.5], "lossEffect": -0.1875, "uColor": "rgb(207,207,255)"}, {"tok": "\u2581", "tokID": 29473, "tokenLogit": -0.0001, "isBold": false, "posToks": ["\u2581read", "\u2581Read", "Read", "\u2581write", "\u2581reading"], "negToks": ["aceae", "\u2581anche", "\u2581familie", "\u2581curious", "\u2581aircraft"], "posVal": [0.75, 0.75, 0.6875, 0.6875, 0.625], "negVal": [-0.625, -0.625, -0.5625, -0.5625, -0.5625], "lossEffect": -0.0, "uColor": "rgb(255,255,255)"}, {"tok": "1", "tokID": 29508, "tokenLogit": 0.002, "isBold": false}, {"tok": "2", "tokID": 29518, "tokenLogit": 0.0015, "isBold": false, "featAct": 3.2969, "bgColor": "#fff6ea"}, {"tok": ".", "tokID": 29491, "tokenLogit": 0.0008, "isBold": false, "posToks": ["\u2581read", "\u2581Read", "Read", "\u2581write", "\u2581reading"], "negToks": ["aceae", "\u2581pione", "\u2581Kamp", "\u2581curious", "\u2581meant"], "posVal": [0.6875, 0.625, 0.625, 0.5625, 0.5], "negVal": [-0.5625, -0.5625, -0.5, -0.5, -0.4375], "lossEffect": -0.0625, "uColor": "rgb(239,239,255)"}, {"tok": "1", "tokID": 29508, "tokenLogit": 0.002, "isBold": false, "featAct": 4.0938, "bgColor": "#fff3e4"}], [{"tok": "\u2581the", "tokID": 1040, "tokenLogit": 0.0003, "isBold": false, "featAct": 21.75, "bgColor": "#ffbf70", "posToks": ["\u2581read", "\u2581Read", "Read", "\u2581reads", "\u2581write"], "negToks": ["\u2581curious", "\u2581anche", "aceae", "\u2581kennis", "river"], "posVal": [2.0625, 1.875, 1.75, 1.5625, 1.5625], "negVal": [-1.5, -1.375, -1.25, -1.25, -1.25], "lossEffect": -0.0, "uColor": "rgb(255,255,255)"}, {"tok": "\u2581following", "tokID": 3064, "tokenLogit": 0.0004, "isBold": false, "featAct": 4.9688, "bgColor": "#fff1df", "posToks": ["\u2581Read", "Read", "\u2581read", "\u2581write", "velle"], "negToks": ["aceae", "\u2581fals", "\u2581cos\u00ec", "package", "SYMBOL"], "posVal": [1.5, 1.4375, 1.4375, 1.3125, 1.25], "negVal": [-1.4375, -1.375, -1.375, -1.3125, -1.25], "lossEffect": -0.0, "uColor": "rgb(255,255,255)"}, {"tok": "\u2581passage", "tokID": 13048, "tokenLogit": 0.0025, "isBold": false, "featAct": 5.8125, "bgColor": "#ffeed9", "posToks": ["\u2581read", "\u2581Read", "Read", "\u2581write", "\u2581reading"], "negToks": ["aceae", "\u2581curious", "package", "++]", "\u2581anche"], "posVal": [1.0, 1.0, 0.9375, 0.875, 0.75], "negVal": [-0.875, -0.75, -0.75, -0.75, -0.75], "lossEffect": -0.3125, "uColor": "rgb(175,175,255)"}, {"tok": "\u2581and", "tokID": 1072, "tokenLogit": -0.0001, "isBold": false, "posToks": ["\u2581read", "\u2581Read", "Read", "\u2581write", "\u2581Pitt"], "negToks": ["\u2581fals", "aceae", "\u2581\u017e", "\u2581anche", "\u00f6r"], "posVal": [0.9375, 0.875, 0.875, 0.8125, 0.75], "negVal": [-0.8125, -0.8125, -0.6875, -0.6875, -0.6875], "lossEffect": -0.0625, "uColor": "rgb(239,239,255)"}, {"tok": "\u2581then", "tokID": 1636, "tokenLogit": 0.0018, "isBold": false, "featAct": 5.7812, "bgColor": "#ffeed9"}, {"tok": "\u2581write", "tokID": 4092, "tokenLogit": 0.0078, "isBold": true, "featAct": 4.4375, "bgColor": "#fff2e2", "posToks": ["Read", "\u2581read", "\u2581Denver", "\u2581Read", "\u2581write"], "negToks": ["\u2581fals", "aceae", "SYMBOL", "\u2581pap", "package"], "posVal": [0.8125, 0.8125, 0.75, 0.75, 0.75], "negVal": [-0.75, -0.6875, -0.625, -0.625, -0.625], "lossEffect": -0.75, "uColor": "rgb(63,63,255)"}, {"tok": "\u2581python", "tokID": 22734, "tokenLogit": -0.0001, "isBold": false, "posToks": ["\u2581read", "\u2581Read", "Read", "\u2581write", "\u2581reading"], "negToks": ["aceae", "\u2581anche", "\u2581restaur", "\u2581curious", "package"], "posVal": [0.9375, 0.9375, 0.875, 0.875, 0.75], "negVal": [-0.8125, -0.6875, -0.6875, -0.6875, -0.6875], "lossEffect": -0.0, "uColor": "rgb(255,255,255)"}, {"tok": "\u2581code", "tokID": 3464, "tokenLogit": 0.0014, "isBold": false}, {"tok": "\u2581to", "tokID": 1066, "tokenLogit": 0.0012, "isBold": false, "featAct": 4.0625, "bgColor": "#fff3e5"}, {"tok": "\u2581answer", "tokID": 5140, "tokenLogit": 0.0005, "isBold": false, "featAct": 2.7969, "bgColor": "#fff7ed", "posToks": ["\u2581read", "\u2581Read", "\u2581sunlight", "Read", "\u2581write"], "negToks": ["\u2581fals", "aceae", "\u2581pione", "\u2581curious", "package"], "posVal": [0.75, 0.6875, 0.625, 0.625, 0.625], "negVal": [-0.625, -0.625, -0.5625, -0.5625, -0.5625], "lossEffect": -0.0625, "uColor": "rgb(239,239,255)"}, {"tok": "\u2581the", "tokID": 1040, "tokenLogit": 0.0003, "isBold": false, "featAct": 2.7656, "bgColor": "#fff7ed", "posToks": ["\u2581Read", "Read", "\u2581read", "\u2581write", "\u2581reading"], "negToks": ["aceae", "\u2581curious", "package", "\u2581pione", "\u2581\\]"], "posVal": [0.5625, 0.5625, 0.5625, 0.5, 0.4375], "negVal": [-0.5, -0.4375, -0.4375, -0.4375, -0.4375], "lossEffect": -0.0, "uColor": "rgb(255,255,255)"}], [{"tok": "\u2581Read", "tokID": 5707, "tokenLogit": 0.0087, "isBold": false, "featAct": 38.75, "bgColor": "#ff8c00", "posToks": ["\u2581utter", "\u2581ende", "agn", "ably", "ble"], "negToks": ["\u2581Sak", "\u2581Tam", "\u2581Ly", "\u2581McK", "\u2581logo"], "posVal": [1.0625, 1.0, 0.875, 0.8125, 0.8125], "negVal": [-1.0, -0.9375, -0.9375, -0.9375, -0.9375], "lossEffect": -0.625, "uColor": "rgb(95,95,255)"}, {"tok": "\u2581the", "tokID": 1040, "tokenLogit": 0.0003, "isBold": false, "featAct": 21.75, "bgColor": "#ffbf70", "posToks": ["\u2581read", "\u2581Read", "Read", "\u2581reads", "\u2581write"], "negToks": ["\u2581curious", "\u2581anche", "aceae", "\u2581kennis", "river"], "posVal": [2.0625, 1.875, 1.75, 1.5625, 1.5625], "negVal": [-1.5, -1.375, -1.25, -1.25, -1.25], "lossEffect": -0.0, "uColor": "rgb(255,255,255)"}, {"tok": "\u2581following", "tokID": 3064, "tokenLogit": 0.0004, "isBold": false, "featAct": 4.9688, "bgColor": "#fff1df", "posToks": ["\u2581Read", "Read", "\u2581read", "\u2581write", "velle"], "negToks": ["aceae", "\u2581fals", "\u2581cos\u00ec", "package", "SYMBOL"], "posVal": [1.5, 1.4375, 1.4375, 1.3125, 1.25], "negVal": [-1.4375, -1.375, -1.375, -1.3125, -1.25], "lossEffect": -0.0, "uColor": "rgb(255,255,255)"}, {"tok": "\u2581passage", "tokID": 13048, "tokenLogit": 0.0025, "isBold": false, "featAct": 5.8125, "bgColor": "#ffeed9", "posToks": ["\u2581read", "\u2581Read", "Read", "\u2581write", "\u2581reading"], "negToks": ["aceae", "\u2581curious", "package", "++]", "\u2581anche"], "posVal": [1.0, 1.0, 0.9375, 0.875, 0.75], "negVal": [-0.875, -0.75, -0.75, -0.75, -0.75], "lossEffect": -0.3125, "uColor": "rgb(175,175,255)"}, {"tok": "\u2581and", "tokID": 1072, "tokenLogit": -0.0001, "isBold": false, "posToks": ["\u2581read", "\u2581Read", "Read", "\u2581write", "\u2581Pitt"], "negToks": ["\u2581fals", "aceae", "\u2581\u017e", "\u2581anche", "\u00f6r"], "posVal": [0.9375, 0.875, 0.875, 0.8125, 0.75], "negVal": [-0.8125, -0.8125, -0.6875, -0.6875, -0.6875], "lossEffect": -0.0625, "uColor": "rgb(239,239,255)"}, {"tok": "\u2581then", "tokID": 1636, "tokenLogit": 0.0018, "isBold": true, "featAct": 5.7812, "bgColor": "#ffeed9"}, {"tok": "\u2581write", "tokID": 4092, "tokenLogit": 0.0078, "isBold": false, "featAct": 4.4375, "bgColor": "#fff2e2", "posToks": ["Read", "\u2581read", "\u2581Denver", "\u2581Read", "\u2581write"], "negToks": ["\u2581fals", "aceae", "SYMBOL", "\u2581pap", "package"], "posVal": [0.8125, 0.8125, 0.75, 0.75, 0.75], "negVal": [-0.75, -0.6875, -0.625, -0.625, -0.625], "lossEffect": -0.75, "uColor": "rgb(63,63,255)"}, {"tok": "\u2581python", "tokID": 22734, "tokenLogit": -0.0001, "isBold": false, "posToks": ["\u2581read", "\u2581Read", "Read", "\u2581write", "\u2581reading"], "negToks": ["aceae", "\u2581anche", "\u2581restaur", "\u2581curious", "package"], "posVal": [0.9375, 0.9375, 0.875, 0.875, 0.75], "negVal": [-0.8125, -0.6875, -0.6875, -0.6875, -0.6875], "lossEffect": -0.0, "uColor": "rgb(255,255,255)"}, {"tok": "\u2581code", "tokID": 3464, "tokenLogit": 0.0014, "isBold": false}, {"tok": "\u2581to", "tokID": 1066, "tokenLogit": 0.0012, "isBold": false, "featAct": 4.0625, "bgColor": "#fff3e5"}, {"tok": "\u2581answer", "tokID": 5140, "tokenLogit": 0.0005, "isBold": false, "featAct": 2.7969, "bgColor": "#fff7ed", "posToks": ["\u2581read", "\u2581Read", "\u2581sunlight", "Read", "\u2581write"], "negToks": ["\u2581fals", "aceae", "\u2581pione", "\u2581curious", "package"], "posVal": [0.75, 0.6875, 0.625, 0.625, 0.625], "negVal": [-0.625, -0.625, -0.5625, -0.5625, -0.5625], "lossEffect": -0.0625, "uColor": "rgb(239,239,255)"}], [{"tok": "1", "tokID": 29508, "tokenLogit": 0.002, "isBold": false}, {"tok": "9", "tokID": 29542, "tokenLogit": 0.0025, "isBold": false}, {"tok": "s", "tokID": 29481, "tokenLogit": -0.0017, "isBold": false}, {"tok": "\u2581guarantee", "tokID": 13355, "tokenLogit": 0.0002, "isBold": false}, {"tok": "\u2581would", "tokID": 1450, "tokenLogit": 0.0014, "isBold": false, "featAct": 3.8594, "bgColor": "#fff4e6"}, {"tok": "\u2581be", "tokID": 1115, "tokenLogit": 0.0024, "isBold": true, "featAct": 4.0625, "bgColor": "#fff3e5", "posToks": ["\u2581Read", "Read", "\u2581read", "\u2581reads", "\u2581write"], "negToks": ["aceae", "f\u00f6r", "\u2581restaur", "Regex", "\u2581anche"], "posVal": [0.75, 0.6875, 0.6875, 0.5625, 0.5625], "negVal": [-0.625, -0.5, -0.5, -0.5, -0.5], "lossEffect": -0.1875, "uColor": "rgb(207,207,255)"}, {"tok": "\u2581one", "tokID": 1392, "tokenLogit": 0.0009, "isBold": false, "featAct": 3.2812, "bgColor": "#fff6ea", "posToks": ["\u2581Read", "\u2581read", "Read", "\u2581reading", "\u2581write"], "negToks": ["aceae", "++]", "\u2581curious", "\u2581anche", "\u2581restaur"], "posVal": [0.8125, 0.6875, 0.625, 0.5625, 0.5625], "negVal": [-0.6875, -0.5625, -0.5625, -0.5, -0.5], "lossEffect": -0.0625, "uColor": "rgb(239,239,255)"}, {"tok": "\u2581half", "tokID": 3563, "tokenLogit": -0.0, "isBold": false, "posToks": ["\u2581read", "\u2581Read", "\u2581reads", "Read", "\u2581write"], "negToks": ["\u2581curious", "\u2581anche", "aceae", "++]", "package"], "posVal": [0.625, 0.625, 0.5625, 0.5625, 0.5], "negVal": [-0.5, -0.5, -0.5, -0.5, -0.4375], "lossEffect": -0.0625, "uColor": "rgb(239,239,255)"}, {"tok": "\u2581day", "tokID": 2138, "tokenLogit": 0.0003, "isBold": false, "featAct": 2.4531, "bgColor": "#fff8ef"}, {"tok": "\u2581of", "tokID": 1070, "tokenLogit": 0.0003, "isBold": false, "posToks": ["\u2581read", "\u2581Read", "Read", "\u2581reading", "\u2581write"], "negToks": ["aceae", "\u2581anche", "\u2581pione", "\u1ed7", "\u2581fals"], "posVal": [0.5625, 0.5625, 0.5, 0.4375, 0.4375], "negVal": [-0.4375, -0.4375, -0.4375, -0.4375, -0.4375], "lossEffect": -0.0, "uColor": "rgb(255,255,255)"}, {"tok": "\u2581changes", "tokID": 5203, "tokenLogit": 0.0015, "isBold": false}]], "idSuffix": "0", "title": "INTERVAL 3.875 - 7.750<br>CONTAINS 0.290%"}, "seq-group-1-10": {"data": [[{"tok": "</s>", "tokID": 2, "tokenLogit": -0.0008, "isBold": false}, {"tok": "</s>", "tokID": 2, "tokenLogit": -0.0008, "isBold": false}, {"tok": "</s>", "tokID": 2, "tokenLogit": -0.0008, "isBold": false}, {"tok": "</s>", "tokID": 2, "tokenLogit": -0.0008, "isBold": false}, {"tok": "</s>", "tokID": 2, "tokenLogit": -0.0008, "isBold": false}, {"tok": "</s>", "tokID": 2, "tokenLogit": -0.0008, "isBold": true}, {"tok": "</s>", "tokID": 2, "tokenLogit": -0.0008, "isBold": false}, {"tok": "</s>", "tokID": 2, "tokenLogit": -0.0008, "isBold": false}, {"tok": "</s>", "tokID": 2, "tokenLogit": -0.0008, "isBold": false}, {"tok": "</s>", "tokID": 2, "tokenLogit": -0.0008, "isBold": false}, {"tok": "</s>", "tokID": 2, "tokenLogit": -0.0008, "isBold": false}], [{"tok": "\u2581participants", "tokID": 13618, "tokenLogit": -0.0016, "isBold": false}, {"tok": "\u2581cannot", "tokID": 4341, "tokenLogit": -0.0023, "isBold": false}, {"tok": "\u2581purchase", "tokID": 8493, "tokenLogit": 0.0037, "isBold": false}, {"tok": "\u2581more", "tokID": 1448, "tokenLogit": 0.0015, "isBold": false}, {"tok": "\u2581than", "tokID": 1589, "tokenLogit": 0.0001, "isBold": false}, {"tok": "\u2581$", "tokID": 1197, "tokenLogit": 0.0016, "isBold": true}, {"tok": "\u2581", "tokID": 29473, "tokenLogit": -0.0001, "isBold": false}, {"tok": "2", "tokID": 29518, "tokenLogit": 0.0015, "isBold": false}, {"tok": "5", "tokID": 29550, "tokenLogit": 0.0024, "isBold": false}, {"tok": "0", "tokID": 29502, "tokenLogit": 0.0014, "isBold": false}, {"tok": "0", "tokID": 29502, "tokenLogit": 0.0014, "isBold": false}], [{"tok": "</s>", "tokID": 2, "tokenLogit": -0.0008, "isBold": false}, {"tok": "</s>", "tokID": 2, "tokenLogit": -0.0008, "isBold": false}, {"tok": "</s>", "tokID": 2, "tokenLogit": -0.0008, "isBold": false}, {"tok": "</s>", "tokID": 2, "tokenLogit": -0.0008, "isBold": false}, {"tok": "</s>", "tokID": 2, "tokenLogit": -0.0008, "isBold": false}, {"tok": "</s>", "tokID": 2, "tokenLogit": -0.0008, "isBold": true}, {"tok": "</s>", "tokID": 2, "tokenLogit": -0.0008, "isBold": false}, {"tok": "</s>", "tokID": 2, "tokenLogit": -0.0008, "isBold": false}, {"tok": "</s>", "tokID": 2, "tokenLogit": -0.0008, "isBold": false}, {"tok": "</s>", "tokID": 2, "tokenLogit": -0.0008, "isBold": false}, {"tok": "</s>", "tokID": 2, "tokenLogit": -0.0008, "isBold": false}], [{"tok": "</s>", "tokID": 2, "tokenLogit": -0.0008, "isBold": false}, {"tok": "</s>", "tokID": 2, "tokenLogit": -0.0008, "isBold": false}, {"tok": "</s>", "tokID": 2, "tokenLogit": -0.0008, "isBold": false}, {"tok": "</s>", "tokID": 2, "tokenLogit": -0.0008, "isBold": false}, {"tok": "</s>", "tokID": 2, "tokenLogit": -0.0008, "isBold": false}, {"tok": "</s>", "tokID": 2, "tokenLogit": -0.0008, "isBold": true}, {"tok": "</s>", "tokID": 2, "tokenLogit": -0.0008, "isBold": false}, {"tok": "</s>", "tokID": 2, "tokenLogit": -0.0008, "isBold": false}, {"tok": "</s>", "tokID": 2, "tokenLogit": -0.0008, "isBold": false}, {"tok": "</s>", "tokID": 2, "tokenLogit": -0.0008, "isBold": false}, {"tok": "</s>", "tokID": 2, "tokenLogit": -0.0008, "isBold": false}], [{"tok": "</s>", "tokID": 2, "tokenLogit": -0.0008, "isBold": false}, {"tok": "</s>", "tokID": 2, "tokenLogit": -0.0008, "isBold": false}, {"tok": "</s>", "tokID": 2, "tokenLogit": -0.0008, "isBold": false}, {"tok": "</s>", "tokID": 2, "tokenLogit": -0.0008, "isBold": false}, {"tok": "</s>", "tokID": 2, "tokenLogit": -0.0008, "isBold": false}, {"tok": "</s>", "tokID": 2, "tokenLogit": -0.0008, "isBold": true}, {"tok": "</s>", "tokID": 2, "tokenLogit": -0.0008, "isBold": false}, {"tok": "</s>", "tokID": 2, "tokenLogit": -0.0008, "isBold": false}, {"tok": "</s>", "tokID": 2, "tokenLogit": -0.0008, "isBold": false}, {"tok": "</s>", "tokID": 2, "tokenLogit": -0.0008, "isBold": false}, {"tok": "</s>", "tokID": 2, "tokenLogit": -0.0008, "isBold": false}]], "idSuffix": "0", "title": "INTERVAL 0.000 - 3.875<br>CONTAINS 99.606%"}}}}};
+}
+
+</script>
