@@ -98,14 +98,14 @@ cd crosscoder-model-diff/
 #### 1. Merge the peft model (optional)
 Merge the LoRA with the instruct model and push the merged model weights to Hugging Face Hub for nnsight inference. 
 
-This step is optional. The merged model weight can be downloaded from Hugging Face, when we run the following scripts.
+This step is optional. The merged model weight is automatically downloaded from Hugging Face, when we run the following scripts.
 ```bash
 python merge_and_push_lora.py
 ```
 #### 2. Collect activations (optional)
 Collect the activations at the output of MLP at layer 17 for both the instruct model and the fine-tuned model with 1024 examples sampled from the FinQA test set. 
 
-This step is optional. The merged model weight can be downloaded from Hugging Face, when we run the following scripts.
+This step is optional. The merged model weight is automatically downloaded from Hugging Face, when we run the following scripts.
 ```bash
 python collect_activations.py
 ```
@@ -113,7 +113,7 @@ python collect_activations.py
 #### 3. Crosscoder training
 We train a BatchTopK crosscoder from [Minder, Julian, et al.](https://arxiv.org/pdf/2504.02922) to alleviate training artifacts that falsely increase the relative norm between the fine-tuned model and the instruct model for a instruct model-specific feature. 
 
-The training weights and configuration can be downloaded from Hugging Face, when we run the crosscoder analysis notebook. The wandb
+The training weights and configuration is automatically downloaded from Hugging Face, when we run the crosscoder analysis notebook. The training process is logged in [wandb](https://wandb.ai/liuhaozhe2000/crosscoder)
 ```bash
 python train.py
 ```
