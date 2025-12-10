@@ -43,12 +43,14 @@ python -m preprocessing.filter_valid_answers
 ---
 
 ## Fine-tuning with nohup
+Use the filtered clean FinQA train set to train the lora adaptor. 
 ```bash
 nohup python main.py FinQA mistralai/Mistral-7B-Instruct-v0.3 liuhaozhe6788 -P> training.log 2>&1 &
 ```
-
+---
 ## Fine-tuned model evaluation with nohup
-### dev set
+Fine-tuned model accuracy evaluation.
+### 1. Dev set
 - fine-tuned
 ```bash
 nohup python main.py FinQA mistralai/Mistral-7B-Instruct-v0.3 liuhaozhe6788 -P -NT -D --VLLM> eval_ft.log 2>&1 &
@@ -64,7 +66,7 @@ nohup python main.py FinQA mistralai/Mistral-7B-Instruct-v0.3 liuhaozhe6788 -P -
 nohup python main.py FinQA mistralai/Mistral-7B-Instruct-v0.3 liuhaozhe6788 -P -NT -D --VLLM --EVAL_TYPE few-shot> eval_few_shot.log 2>&1 &
 ```
 
-### test set
+### 2. Test set
 - fine-tuned
 ```bash
 nohup python main.py FinQA mistralai/Mistral-7B-Instruct-v0.3 liuhaozhe6788 -P -NT -T --VLLM> eval_ft.log 2>&1 &
@@ -85,17 +87,32 @@ nohup python main.py FinQA mistralai/Mistral-7B-Instruct-v0.3 liuhaozhe6788 -P -
 python inference.py
 ```
 
-## Crosscoder model diffing
+## Model diffing
+### Crosscoder
+Crosscoder is a sparse autoencoder architecture that is trained on the activations with the same hook name from the base LLM and the fine-tuned LLM to compare the difference between the models. By analysing the crosscoder, one can gain insight into how the fine-tuning process changes the features that the model learns. 
 ```bash
 cd crosscoder-model-diff/
 ```
-### Merge the peft model and push to Hugging Face Hub for nnsight
+#### 1. Merge the peft model (optional)
+Merge the LoRA with the instruct model and push the merged model weights to Hugging Face Hub for nnsight inference. 
+
+This step is optional and the merged model weight can be downloaded from Hugging Face Hub.
 ```bash
 python merge_and_push_lora.py
 ```
-### Crosscoder training
+#### 2. Collect activations (optional)
+Collect the activations at the output of MLP at layer 17 for both the instruct model and the fine-tuned model with 1024 examples sampled from the FinQA test set. 
+
+This step is optional and the collected activations can be downloaded from Hugging Face Hub.
+```bash
+python collect_activations.py
+```
+
+#### 3. Crosscoder training
+We train a BatchTopK crosscoder from [Minder, Julian, et al.](https://arxiv.org/pdf/2504.02922) to alleviate training artifacts that falsely increase the relative norm between the fine-tuned model and the instruct model for a instruct model-specific feature.
 ```bash
 python train.py
 ```
-### Crosscoder analysis
+#### 4. Crosscoder analysis
+We visualise the histogram of relative decoder norm strength and the cosine similarity of decoder vector between models, as well as generate the latent dashboard to display the hot tokens for some interesting latents. The results are stored under `crosscoder-model-diff/results/Mistral-7B-Instruct-v0.3_1k_samples_batchtopk` after running the notebook `analysis_and_dashboard.ipynb`.
 

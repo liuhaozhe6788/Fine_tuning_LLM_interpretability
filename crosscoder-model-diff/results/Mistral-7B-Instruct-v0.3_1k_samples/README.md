@@ -1,1 +1,1 @@
-The analysis results of the crosscoder for mistral-7b-instruct model, but the training samples are only a subset of 1024 examples from the training dataset.
+The analysis results of the vanilla crosscoder for mistral-7b-instruct model. The training samples are only a subset of 1024 examples from the training dataset.
