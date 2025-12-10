@@ -1,0 +1,914 @@
+
+<div id='dropdown-container'></div>
+        
+<div class='grid-container'>
+        <div id='column-0' class="grid-column" style='max-height: 750px; '>
+        <!-- Activation densities histogram -->
+        <div class="plotly-hist" id="histogram-acts-0" style="height: 150px; margin-top: 0px;"></div>
+        <!-- Logits table for Model A -->
+        <div class="logits-table" id="logits-table-0"></div><!-- Logits table for Model B -->
+        <div class="logits-table" id="logits-table-B-0"></div><!-- Feature Info Tables -->
+        <div class="feature-tables" id="feature-tables-0"></div></div>
+    
+    <div id='column-1-0' class="grid-column" style='max-height: 750px; '>
+        <!-- Sequence group -->
+        <div class="seq-group" id="seq-group-1-0"></div></div>
+    
+    <div id='column-1-1' class="grid-column" style='max-height: 750px; '>
+        <!-- Sequence group -->
+        <div class="seq-group" id="seq-group-1-1"></div>
+        <!-- Sequence group -->
+        <div class="seq-group" id="seq-group-1-3"></div></div>
+    
+    <div id='column-1-2' class="grid-column" style='max-height: 750px; '>
+        <!-- Sequence group -->
+        <div class="seq-group" id="seq-group-1-4"></div>
+        <!-- Sequence group -->
+        <div class="seq-group" id="seq-group-1-5"></div>
+        <!-- Sequence group -->
+        <div class="seq-group" id="seq-group-1-6"></div></div>
+    
+    <div id='column-1-3' class="grid-column" style='max-height: 750px; '>
+        <!-- Sequence group -->
+        <div class="seq-group" id="seq-group-1-7"></div>
+        <!-- Sequence group -->
+        <div class="seq-group" id="seq-group-1-8"></div>
+        <!-- Sequence group -->
+        <div class="seq-group" id="seq-group-1-9"></div></div>
+    
+    <div id='column-1-4' class="grid-column" style='max-height: 750px; '>
+        <!-- Sequence group -->
+        <div class="seq-group" id="seq-group-1-10"></div></div>
+</div>
+
+<style>
+/* Styling of the dropdowns */
+select {
+    appearance: none;
+    border: 0;
+    flex: 1;
+    padding: 0 1em;
+    background-color: #eee;
+    cursor: pointer;
+}
+.select {
+    box-shadow: 0 5px 5px rgba(0, 0, 0, 0.25);
+    cursor: pointer;
+    display: flex;
+    width: 100px;
+    height: 25px;
+    border-radius: .25em;
+    overflow: hidden;
+    position: relative;
+    margin-right: 15px;
+}
+.select::after {
+    position: absolute;
+    content: '\25BC';
+    font-size: 9px;
+    top: 0;
+    right: 0;
+    padding: 1em;
+    background-color: #ddd;
+    transition: .25s all ease;
+    pointer-events: none;
+}
+.select:hover::after {
+    color: black;
+}
+#dropdown-container {
+    margin-left: 10px;
+    margin-top: 20px;
+    display: flex;
+    flex-wrap: wrap;
+}
+/* Styling of the top-level container */
+.grid-container {
+    font-family: 'system-ui';
+    border: 1px solid #e6e6e6;
+    background-color: #fff;
+    margin: 30px 10px;
+    box-shadow: 0 5px 5px rgba(0, 0, 0, 0.25);
+    display: grid;
+    justify-content: start;
+    grid-template-columns: auto;
+    overflow-x: auto;
+    overflow-y: visible;
+    grid-auto-flow: column;
+    white-space: nowrap;
+    padding-bottom: 12px;
+    padding-top: 35px;
+    padding-left: 20px;
+}
+/* Styling each grid column (note, the max-height controls height of grid-container) */
+.grid-column {
+    margin-left: 20px;
+    padding-right: 20px;
+    width: max-content;
+    overflow-y: auto;
+    max-height: 750px;
+}
+/* Styling the scrollbars */
+::-webkit-scrollbar {
+    height: 10px;
+    width: 10px;
+}
+::-webkit-scrollbar-track {
+    background: #f1f1f1;
+}
+::-webkit-scrollbar-thumb {
+    background: #999;
+}
+::-webkit-scrollbar-thumb:hover {
+    background: #555;
+}
+/* Margin at the bottom of each histogram */
+.plotly-hist {
+    margin-bottom: 25px;
+}
+/* Margins below the titles (most subtitles are h4, except for the prompt-centric view which has h2 titles) */
+h4 {
+    margin-top: 0px;
+    margin-bottom: 10px;
+}
+/* Some space below the <hr> line in prompt-centric vis */
+hr {
+    margin-bottom: 35px;
+}
+/* Default font & appearance for the words in the sequence, before being hovered over */
+code {
+    font-family: Consolas, Menlo, Monaco;
+}
+/* Margin at the bottom of every sequence group, plus handle how overflow works (maybe not necessary) */
+.seq-group {
+    overflow-x: auto;
+    overflow-y: visible;
+    padding-top: 5px;
+    padding-bottom: 10px;
+    margin-bottom: 10px;
+}
+/* Margin between single sequences */
+.seq {
+    margin-bottom: 11px;
+}
+/* Styling for each token in a sequence */
+.token {
+    font-family: Consolas, Menlo, Monaco;
+    font-size: 0.9em;
+    border-top-left-radius: 3px;
+    border-top-right-radius: 3px;
+    padding: 1px;
+    color: black;
+    display: inline;
+    white-space: pre-wrap;
+}
+/* All the messy hovering stuff! */
+.hover-text {
+    position: relative;
+    cursor: pointer;
+    display: inline-block; /* Needed to contain the tooltip */
+    box-sizing: border-box;
+}
+.tooltip {
+    background-color: #fff;
+    color: #333;
+    text-align: center;
+    border-radius: 10px;
+    padding: 5px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.25);
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    font-family: 'system-ui';
+    font-size: 1.1em;
+    display: none;
+    position: fixed;
+    z-index: 1000;
+}
+.token:hover {
+    border-top: 3px solid black;
+}
+.tooltip-container {
+    position: absolute;
+    pointer-events: none;
+}
+.hover-text:hover + .tooltip-container .tooltip {
+    display: block;
+}
+
+
+table {
+    border: unset;
+    color: black;
+    border-collapse: collapse;
+    width: -moz-fit-content;
+    width: -webkit-fit-content;
+    width: fit-content;
+    margin-left: auto;
+    margin-right: auto;
+    font-size: 0.8em;
+}
+table.table-left tr {
+    border-bottom: 1px solid #eee;
+    padding: 15px;
+}
+table.table-left td {
+    padding: 3px 4px;
+}
+table.table-left {
+    width: 100%;
+}
+table.table-left td.left-aligned {
+    max-width: 120px;
+    overflow-x: hidden;
+}
+td {
+    border: none;
+    padding: 2px 4px;
+    white-space: nowrap;
+}
+.right-aligned {
+    text-align: right;
+}
+.left-aligned {
+    text-align: left;
+}
+.center-aligned {
+    text-align: center;
+    padding-bottom: 8px;
+}
+table code {
+    background-color: #ddd;
+    padding: 2px;
+    border-radius: 3px;
+}
+.table-container {
+    width: 100%;
+}
+.half-width-container {
+    display: flex;
+}
+.half-width {
+    width: 50%;
+    margin-right: -4px;
+}
+
+/* Feature tables should have space below them, also they should have a min column width */
+div.feature-tables table {
+    margin-bottom: 25px;
+    min-width: 250px;
+}
+/* Configure logits table container (i.e. the thing containing the smaller and larger tables) */
+div.logits-table {
+    min-width: 375px;
+    display: flex;
+    overflow-x: hidden;
+    margin-bottom: 20px;
+}
+/* Code is always bold in this table (this is just the neg/pos string tokens) */
+div.logits-table code {
+    font-weight: bold;
+}
+/* Set width of the tables inside the container (so they can stack horizontally), also put a gap between them */
+div.logits-table > div.positive {
+    width: 47%;
+}
+div.logits-table > div.negative {
+    width: 47%;
+    margin-right: 5%;
+}
+
+
+</style>
+
+<script src="https://d3js.org/d3.v6.min.js"></script>
+<script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+
+<script>
+
+document.addEventListener("DOMContentLoaded", function(event) {
+    const ALL_DATA = defineData();
+    setupPage(ALL_DATA['DASHBOARD_DATA'], ALL_DATA['AGGDATA']);
+});
+
+function setupPage(DASHBOARD_DATA, AGGDATA) {
+    // Dynamically creates dropdowns from the data (by parsing its keys), and causes `createVis` to be called whenever
+    // the dropdowns change. This includes the initial call to `createVis` with the first key, which is START_KEY.
+
+    const START_KEY = "3086";
+        // The start key has already been user-defined, we need to check it's present in DASHBOARD_DATA
+    if (!Object.keys(DASHBOARD_DATA).includes(START_KEY)) {
+        console.error(`No data available for key: ${START_KEY}`);
+    }
+    const startParts = START_KEY.split('|');
+    
+    // Function which will measure the width of a key (used for dynamically setting the width of our dropdowns)
+    function measureTextWidth(text, font) {
+        // Create a temporary span element
+        const span = document.createElement("span");
+        span.style.visibility = "hidden"; // Make sure it's not visible
+        span.style.position = "absolute"; // Take it out of document flow
+        span.style.font = font; // Apply font styling similar to the select options
+        span.textContent = text;
+        document.body.appendChild(span);
+        const width = span.offsetWidth; // Get the width of the span
+        document.body.removeChild(span); // Remove the span from the body
+        return width;
+    }
+    
+    // Check if there's only one key, in which case we have no selection to make
+    if (Object.keys(DASHBOARD_DATA).length === 1) {
+    
+        const onlyKey = Object.keys(DASHBOARD_DATA)[0];
+        createVis(DASHBOARD_DATA[onlyKey]);
+    
+    } else {
+    
+        // Assuming `DASHBOARD_DATA` is available and d3 has been included
+        const parsedKeys = Object.keys(DASHBOARD_DATA).map(key => key.split("|"));
+    
+        // Determine `n` - the number of dropdowns needed
+        const n = parsedKeys[0].length;
+    
+        // Create a structure to store options for each dropdown
+        const options = Array.from({ length: n }, () => new Set());
+    
+        // Populate options for each dropdown
+        parsedKeys.forEach(parts => {
+            parts.forEach((part, index) => options[index].add(part));
+        });
+    
+        // Select the container for the dropdowns
+        const container = d3.select('#dropdown-container');
+    
+        // Create the dropdowns
+        options.forEach((opts, i) => {
+            // We wrap each `select` element in a `.select` div, for styling reasons)
+            const selectDiv = container.append('div').attr('class', 'select');
+            const selectElem = selectDiv.append('select').attr('id', `select-${i}`);
+            let maxWidth = 0;
+    
+            // Set the title of this dropdown
+            
+    
+            opts.forEach(opt => {
+                // Add this as an option
+                const optionElem = selectElem.append('option').text(opt).attr('value', opt);
+    
+                // If it matches the start key, set it to true
+                if (startParts[i] === opt) {
+                    optionElem.attr('selected', true);
+                }
+    
+                // Calculate the width of this option, and possibly update the max width (for the select div)
+                const width = measureTextWidth(opt, "1em system-ui");
+                if (width > maxWidth) {
+                    maxWidth = width;
+                }
+            });
+    
+            // Set the width of the select div to the max width + 45px (for the dropdown arrow)
+            selectDiv.style('width', `${maxWidth + 45}px`);
+    
+            // Add event listener to update the visualization (and the selection options) when the dropdown changes
+            selectElem.on('change', function() {
+                updateDropdowns();
+            });
+        });
+    
+        // This gets called every time the dropdowns are updated
+        function updateDropdowns() {
+    
+            // Empty all grid-column elements
+            d3.selectAll(".grid-column").each(function() {
+                d3.select(this).selectAll("*").html(""); 
+            });
+    
+            // Get the current value of each dropdown
+            const currentSelections = options.map((_, i) => d3.select(`#select-${i}`).property('value'));
+    
+            // Disable options that are not available based on the current selections
+            options.forEach((opts, i) => {
+                const select = d3.select(`#select-${i}`);
+                select.selectAll('option').each(function() {
+                    const optionValue = d3.select(this).attr('value');
+                    const potentialKey = [...currentSelections.slice(0, i), optionValue, ...currentSelections.slice(i + 1)].join('|');
+                    d3.select(this).attr('disabled', !DASHBOARD_DATA.hasOwnProperty(potentialKey) ? true : null);
+                });
+            });
+    
+            // Parse these options into the key for our DASHBOARD_DATA object
+            const selectedKey = currentSelections.join('|');
+    
+            // Create vis using that data
+            createVis(DASHBOARD_DATA[selectedKey]);
+        }
+    
+        // Initial trigger
+        updateDropdowns();
+    }
+}
+
+function createVis(DATA) {
+    // Create the vis from the data (this is where all the JavaScript files in this repo get dumped into). The DATA
+    // object here will be DASHBOARD_DATA["8"] in the feature-centric vis, or DASHBOARD_DATA["act_quantile|'first' (6)"]
+    // in the prompt-centric vis).
+
+        // ! Using `DATA.actsHistogramData` to fill in the activations histogram
+    
+    function createActsLine(color, width, height) {
+        return {
+            type: 'line', line: {color: color, width: width},
+            x0: 0, x1: 0, xref: 'x',
+            y0: 0, y1: height, yref: 'paper',
+            visible: false,
+        }
+    }
+    
+    function createActsAnnotation() {
+        return {
+            text: '', showarrow: false,
+            x: 0, xref: 'x', 
+            y: 0.9, yref: 'paper',
+            xshift: 3, align: 'left', xanchor: 'left',
+            visible: false,
+        }
+    }
+    
+    function setupActsHistogram(histId, histData) {
+    
+        // Create layout. This has 2 lines with annotations, both initially set to invisible (first is for dynamic on-hover
+        // and second is for static, for the prompt-centric vis). We need to define them both so that when JavaScript alters
+        // 'shapes[0]' or 'shapes[1]' we get no error
+        var layout = {
+            paper_bgcolor: 'white',
+            plot_bgcolor: 'white',
+            xaxis: {
+                gridcolor: '#eee',
+                zerolinecolor: '#eee',
+                tickvals: histData.ticks,
+                range: [0, 1.2 * Math.max(...histData.x)],
+            },
+            yaxis: {gridcolor: '#eee', zerolinecolor: '#eee'},
+            barmode: 'relative',
+            bargap: 0.01,
+            showlegend: false,
+            margin: {l: 50, r: 25, b: 25, t: 25, pad: 4},
+            paper_bgcolor: 'rgba(0,0,0,0)',
+            plot_bgcolor: 'rgba(0,0,0,0)',
+            responsive: true,
+            shapes: [createActsLine('black', 2, 1.0), createActsLine('black', 1, 0.9)],
+            annotations: [createActsAnnotation(), createActsAnnotation()],
+        };
+    
+        // Create traces (this is simple)
+        var traces = [{
+            x: histData.x,
+            y: histData.y,
+            type: 'bar',
+            marker: {color: histData.colors},
+        }];
+    
+        // Plot the histogram
+        Plotly.newPlot(histId, traces, layout, {responsive: true, displayModeBar: false});
+    
+        // Maybe add title (if the title already existed then we update it, otherwise we create a new one)
+        if(histData.title) {
+            var histogramElement = document.getElementById(histId);
+            var existingTitleElement = histogramElement.previousSibling;
+            if (existingTitleElement && existingTitleElement.tagName === 'H4') {
+                existingTitleElement.innerHTML = histData.title;
+            } else {
+                var titleElement = document.createElement('h4');
+                titleElement.innerHTML = histData.title;
+                histogramElement.parentNode.insertBefore(titleElement, histogramElement);
+            }
+        }
+    }
+    
+    // 'actsHistogramData' is a dictionary mapping suffixes to histogram data (to make each histogram unique)
+    // We iterate over it, and create a histogram for each one
+    Object.entries(DATA.actsHistogramData).forEach(([suffix, histData]) => {
+        var t0 = performance.now();
+    
+        histId = `histogram-acts-${suffix}`;
+        setupActsHistogram(histId, histData);
+    
+        var t1 = performance.now();
+        console.log(`HTML for ${histId} generated in ${(t1 - t0).toFixed(1)} ms`);
+    });
+    
+    
+    
+    
+    // ! Using `DATA.logitsATableData` to fill in Model A pos/neg logit tables
+    function setupLogitTablesA(logitsTableId, tablesData, tableMetaData) {
+        // Fetch table data
+        const tableData = tablesData[tableMetaData.dataKey];
+    
+        // Select the table container by its ID
+        const tablesContainer = d3.select(`#${logitsTableId}`);
+    
+        // Select or create table container
+        const tableId = `${tableMetaData.class}-${logitsTableId}`;
+        const tableContainer = tablesContainer.select(`#${tableId}`);
+        
+        // If this table container doesn't exist, create it
+        if (tableContainer.empty()) {
+            const section = tablesContainer.append("div").attr("class", tableMetaData.class);
+            section.append("h4").html(tableMetaData.title);
+            section.append("table").attr("id", tableId).attr("class", "table-left");
+        }
+    
+        // Get table, clear it, and add new data
+        const table = tablesContainer.select(`#${tableId}`);
+        table.selectAll('tr').remove();
+    
+        // Bind logits data to rows
+        const rows = table.selectAll('tr')
+            .data(tableData)
+            .enter()
+            .append('tr');
+        
+        // Append token cell
+        rows.append('td')
+            .attr('class', 'left-aligned')
+            .append('code')
+            .style('background-color', d => d.color)
+            .text(d => d.symbol);
+        
+        // Append value cell
+        rows.append('td')
+            .attr('class', 'right-aligned')
+            .text(d => d.value.toFixed(2));
+    }
+    
+    // Define metadata for Model A tables
+    const logitTablesMetaDataA = [
+        {title: "BASE NEGATIVE LOGITS", dataKey: "negLogits", class: "negative"},
+        {title: "BASE POSITIVE LOGITS", dataKey: "posLogits", class: "positive"},
+    ];
+    
+    // Create Model A tables
+    Object.entries(DATA.logitsATableData).forEach(([suffix, tablesData]) => {
+        const logitsTableId = `logits-table-${suffix}`;
+        logitTablesMetaDataA.forEach(tableMetaData => {
+            setupLogitTablesA(logitsTableId, tablesData, tableMetaData);
+        });
+    });
+    // ! Using `DATA.logitsBTableData` to fill in Model B pos/neg logit tables
+    function setupLogitTablesB(logitsTableId, tablesData, tableMetaData) {
+        // Fetch table data
+        const tableData = tablesData[tableMetaData.dataKey];
+    
+        // Select the table container by its ID
+        const tablesContainer = d3.select(`#${logitsTableId}`);
+    
+        // Select or create table container
+        const tableId = `${tableMetaData.class}-${logitsTableId}`;
+        const tableContainer = tablesContainer.select(`#${tableId}`);
+        
+        // If this table container doesn't exist, create it
+        if (tableContainer.empty()) {
+            const section = tablesContainer.append("div").attr("class", tableMetaData.class);
+            section.append("h4").html(tableMetaData.title);
+            section.append("table").attr("id", tableId).attr("class", "table-left");
+        }
+    
+        // Get table, clear it, and add new data
+        const table = tablesContainer.select(`#${tableId}`);
+        table.selectAll('tr').remove();
+    
+        // Bind logits data to rows
+        const rows = table.selectAll('tr')
+            .data(tableData)
+            .enter()
+            .append('tr');
+        
+        // Append token cell
+        rows.append('td')
+            .attr('class', 'left-aligned')
+            .append('code')
+            .style('background-color', d => d.color)
+            .text(d => d.symbol);
+        
+        // Append value cell
+        rows.append('td')
+            .attr('class', 'right-aligned')
+            .text(d => d.value.toFixed(2));
+    }
+    
+    // Define metadata for Model B tables
+    const logitTablesMetaDataB = [
+        {title: "FINETUNED NEGATIVE LOGITS", dataKey: "negLogits", class: "negative"},
+        {title: "FINETUNED POSITIVE LOGITS", dataKey: "posLogits", class: "positive"},
+    ];
+    
+    // Create Model B tables
+    Object.entries(DATA.logitsBTableData).forEach(([suffix, tablesData]) => {
+        const logitsTableId = `logits-table-B-${suffix}`;  // Note the -B- in the ID
+        logitTablesMetaDataB.forEach(tableMetaData => {
+            setupLogitTablesB(logitsTableId, tablesData, tableMetaData);
+        });
+    });
+    // ! Using `DATA.featureTablesData` to create & fill in the feature tables
+    
+    function setupFeatureTables(tablesContainerId, tablesData, tableMetaData) {
+        
+        // Fetch table data (singular), if it doesn't exist then return early
+        const tableData = tablesData[tableMetaData.dataKey] || null;
+        if (tableData === null) {
+            return;
+        }
+    
+        // Get table container from its ID
+        const featureTablesDiv = d3.select(`#${tablesContainerId}`);
+    
+        // Add a div to hold the header and table, give it a unique ID, and empty it (if that div already existed)
+        const tableContainerId = `${tableMetaData.dataKey}-${tablesContainerId}`;
+        const tableContainer = featureTablesDiv.append("div").attr("id", tableContainerId);
+        tableContainer.selectAll("*").remove();
+    
+        // Add the title
+        tableContainer.append("h4").html(tableMetaData.title);
+    
+        // Create the table, and header / body
+        const table = tableContainer.append("table").attr("class", "table-left");
+        const thead = table.append("thead");
+        const tbody = table.append("tbody");
+        const headerRow = thead.append("tr");
+    
+        // Append the 3 columns to this table's header row
+        tableMetaData.columns.forEach(col => {
+            headerRow.append("td")
+            .attr("class", col === "Index" ? "left-aligned" : "right-aligned")
+            .html(col);
+        });
+    
+        // Append our data to the tbody
+        const rows = tbody.selectAll('tr')
+            .data(tableData)
+            .enter()
+            .append('tr');
+    
+        rows.selectAll('td')
+            .data(row => Object.values(row))
+            .enter()
+            .append('td')
+            .attr('class', (d, i) => i === 0 ? 'left-aligned' : 'right-aligned')
+            .html(d => d);
+    }
+        
+    // Define some data which will tell us how to create our tables (this isn't a function of data, it's always the same)
+    const featureTablesMetaData = [
+        {title: "NEURON ALIGNMENT", columns: ["Index", "Value", "% of L<sub>1</sub>"], dataKey: "neuronAlignment"},
+        {title: "RELATIVE DECODER STRENGTH", columns: ["Model", "Value"], dataKey: "relativeDecoderStrength"},
+        {title: "DECODER COSINE SIM BETWEEN MODELS", columns: ["Value"], dataKey: "decoderCosineSim"},
+        {title: "CORRELATED NEURONS", columns: ["Index", "Pearson Corr.", "Cosine Sim."], dataKey: "correlatedNeurons"},
+        {title: "CORRELATED FEATURES", columns: ["Index", "Pearson Corr.", "Cosine Sim."], dataKey: "correlatedFeatures"},
+        {title: "CORRELATED FEATURES (B-ENCODER)", columns: ["Index", "Pearson Corr.", "Cosine Sim."], dataKey: "correlatedFeaturesB"},
+    ]
+    
+    // 'featureTablesData' is a dictionary mapping suffixes to feature tables data (to make each table unique)
+    // We iterate over it, and create a table for each one
+    Object.entries(DATA.featureTablesData).forEach(([suffix, tablesData]) => {
+        var t0 = performance.now();
+    
+        // For each set of tables, we need to empty it, then create each of the new tables (up to 3)
+        tablesContainerId = `feature-tables-${suffix}`;
+        featureTablesMetaData.forEach(tableMetaData => {
+            setupFeatureTables(tablesContainerId, tablesData, tableMetaData);
+        });
+        
+        var t1 = performance.now();
+        console.log(`HTML for ${tablesContainerId} generated in ${(t1 - t0).toFixed(1)} ms`);
+    });
+    
+    
+    
+    
+    function addLineHistogram(histogramID, shapeIndex, tok, xValue) {
+        // Updates histogram with a line (if the histogram exists)
+        // shapeIndex 0 is for on-hover, 1 is for permanent line
+        if (document.getElementById(histogramID)) {
+            Plotly.relayout(histogramID, {
+                [`shapes[${shapeIndex}].x0`]: xValue,
+                [`shapes[${shapeIndex}].x1`]: xValue,
+                [`shapes[${shapeIndex}].visible`]: true,
+                [`annotations[${shapeIndex}].x`]: xValue,
+                [`annotations[${shapeIndex}].text`]: `|${tok}|<br>${xValue.toFixed(3)}`,
+                [`annotations[${shapeIndex}].visible`]: true,
+            });
+        }
+    }
+    
+    function removeLineHistogram(histogramID, shapeIndex) {
+        if (document.getElementById(histogramID)) {
+            Plotly.relayout(histogramID, {
+                [`shapes[${shapeIndex}].visible`]: false,
+                [`annotations[${shapeIndex}].visible`]: false,
+            });
+        }
+    }
+    
+    function generateTokHtmlElement(
+        parent, tok, tokID, uColor, bgColor, isBold, featAct, tokenLogit, lossEffect, posToks, posVal, negToks, negVal, permanentLine, hide, idSuffix,
+    ) {
+        // Figure out if previous token was active (this affects the construction of the tooltip)
+        let prevTokenActive = posToks.length + negToks.length > 0;
+    
+        // Create the token span (this will contain just the token, not the hoverdata)
+        let tokenSpan = parent.append("span")
+            .attr("class", "hover-text");
+    
+        // Get the histogram ids
+        let histogramActsID = `histogram-acts-${idSuffix}`;
+        let histogramLogitsID = `histogram-logits-${idSuffix}`;
+    
+        // Put actual token in the tokenSpan object (i.e. the thing we see without hovering)    
+        tokenSpan.append("span")
+            .attr("class", "token")
+            .style("background-color", bgColor)
+            .style("border-bottom", `4px solid ${uColor}`)
+            .style("font-weight", isBold ? "bold" : "normal")
+            .text(tok);
+    
+        // If hide is true, then we just show a box saying "no information was calculated for this token"
+        if (hide) {
+            // First define the tooltip div (added to the parent element, i.e. it's a sibling of the token span)
+            let tooltipHeight = 70;
+            let tooltipWidth = 150;
+            let tooltipDiv = parent.append("div")
+                .attr("class", "tooltip")
+                .style("height", tooltipHeight + "px")
+                .style("width", tooltipWidth + "px")
+                .style("font-size", "0.85em")
+                .style("white-space", "pre-wrap")
+                .style("align-items", "center")
+                .style("text-align", "center")
+                .style("padding", "15px")
+                .html("No information was calculated for this token, since you used compute_buffer=False.");
+    
+            // Add dynamic behaviour: show the tooltip on hover, and also add lines to the two histograms
+            tokenSpan.on('mouseover', function() {
+                tooltipDiv.style('display', 'flex');
+                tooltipDiv.style('position', 'fixed');
+            })
+            tokenSpan.on('mousemove', function(event) {
+                tooltipDiv.style('left', `${event.clientX - tooltipWidth / 2}px`);
+                tooltipDiv.style('top', `${event.clientY + 20}px`);
+            });
+            tokenSpan.on('mouseout', function() {
+                tooltipDiv.style('display', 'none');
+            });
+            
+        // If we're not hiding (because we only generated data for the bolded tokens), then create tooltip & add it on hover
+        } else { 
+    
+            // First define the tooltip div (added to the parent element, i.e. it's a sibling of the token span)
+            let tooltipHeight = prevTokenActive ? 270 : 160;
+            let tooltipWidth = prevTokenActive ? 350 : 250;
+            let tooltipDiv = parent.append("div")
+                .attr("class", "tooltip")
+                .style("height", tooltipHeight + "px")
+                .style("width", tooltipWidth + "px")
+                .style("align-items", "center")
+                .style("text-align", "center");
+    
+            // Next, create a table container, to contain 2 tables: one with basics (acts & loss effect), one with per-token logits
+            let tableContainer = tooltipDiv.append("div").attr("class", "table-container");
+    
+            // Creat the first table
+            let tokRow = `<td class="right-aligned">Token</td><td class="left-aligned"><code>${tok}</code> (${tokID})</td>`;
+            let featActRow = `<td class="right-aligned">Feature activation</td><td class="left-aligned">${featAct >= 0 ? '+' : ''}${featAct.toFixed(3)}</td>`;
+            let lossRow = `<td class="right-aligned">Loss contribution</td><td class="left-aligned">${lossEffect >= 0 ? '+' : ''}${lossEffect.toFixed(3)}</td>`;
+            let firstTable = tableContainer.append("table");
+            firstTable.append("tr").html(tokRow);
+            firstTable.append("tr").html(featActRow);
+            firstTable.append("tr").html(lossRow);
+            tableContainer.append("br");
+            
+            // If previous token is active, we add logit table
+            if (prevTokenActive) {
+                
+                // Create container for top & bottom logits tables
+                let logitsTableContainer = tableContainer.append("div").attr("class", "half-width-container")
+    
+                // Create the positive table, and fill it with values
+                let posLogitsTable = logitsTableContainer.append("table").attr("class", "half-width")
+                posLogitsTable.append("tr").html(`<td class="center-aligned" colspan="2">Pos logit contributions</td>`);
+                posToks.forEach((tok, index) => {
+                    posLogitsTable.append("tr").html(`
+                        <td class="right-aligned"><code>${tok}</code></td>
+                        <td class="left-aligned">${posVal[index] > 0 ? '+' : ''}${posVal[index].toFixed(3)}</td>
+                    `);
+                });
+    
+                // Create the negative table, and fill it with values
+                let negLogitsTable = logitsTableContainer.append("table").attr("class", "half-width")
+                negLogitsTable.append("tr").html(`<td class="center-aligned" colspan="2">Neg logit contributions</td>`);
+                negToks.forEach((tok, index) => {
+                    negLogitsTable.append("tr").html(`
+                        <td class="right-aligned"><code>${tok}</code></td>
+                        <td class="left-aligned">${negVal[index] > 0 ? '+' : ''}${negVal[index].toFixed(3)}</td>
+                    `);
+                });
+    
+            // If previous token is not active, we add a message instead
+            } else {
+                tableContainer.append("div")
+                    .style("font-size", "0.85em")
+                    .html("Feature not active on prev token;<br>no predictions were affected.");
+            }
+    
+            // Add dynamic behaviour: show the tooltip on hover, and also add lines to the two histograms
+            tokenSpan.on('mouseover', function() {
+                tooltipDiv.style('display', 'flex');
+                tooltipDiv.style('position', 'fixed');
+                addLineHistogram(histogramActsID, 0, tok, featAct);
+                addLineHistogram(histogramLogitsID, 0, tok, tokenLogit);
+            })
+            tokenSpan.on('mousemove', function(event) {
+                tooltipDiv.style('left', `${event.clientX - tooltipWidth / 2}px`);
+                tooltipDiv.style('top', `${event.clientY + 20}px`);
+            });
+            tokenSpan.on('mouseout', function() {
+                tooltipDiv.style('display', 'none');
+                removeLineHistogram(histogramActsID, 0);
+                removeLineHistogram(histogramLogitsID, 0);
+            });
+    
+            // Add static behaviour: if required, then show the permanent line on the histograms, as shapes[1]
+            if (permanentLine & isBold) {
+                addLineHistogram(histogramActsID, 1, tok, featAct);
+                addLineHistogram(histogramLogitsID, 1, tok, tokenLogit);
+            }
+        }
+    }
+    
+    Object.entries(DATA.tokenData).forEach(([seqGroupID, seqGroupData]) => {
+        const t0 = performance.now();
+    
+        // Find the sequence group container (this is the only thing that already exists)
+        const seqGroupContainer = d3.select(`#${seqGroupID}`);
+    
+        // Empty this container of title & all sequences
+        seqGroupContainer.selectAll('*').remove();
+    
+        // If title exists, add the title to this sequence group (we need .html not .text, because it could have <br>)
+        if ("title" in seqGroupData) {
+            seqGroupContainer.append('h4').html(seqGroupData.title);
+        }
+    
+        // Get the ID suffix for this sequence group
+        const idSuffix = seqGroupData.idSuffix;
+    
+        // Select all sequences (initially empty), and then add our sequences & bind them to the elems in seqGroupData.data
+        const seqGroup = seqGroupContainer.selectAll('.seq')
+            .data(seqGroupData.data)
+            .enter()
+            .append('div')
+            .attr('class', 'seq');
+    
+        // For each sequence, we iterate over & add all its tokens
+        seqGroup.each(function(seqData) {
+    
+            // Get `seq`, which is the individual `seq` element in seqGroup (i.e. the sequence container)
+            const seq = d3.select(this);
+    
+            // Iterate through each token data dict in `seqData`, and add this token to the sequence
+            seqData.forEach(tokData => {
+    
+                generateTokHtmlElement(
+                    seq,                                // object we'll append the token to
+                    tokData.tok,                        // string token
+                    tokData.tokID,                      // token ID (shown on hover, after PR request)
+                    tokData["uColor"] || "#fff",        // underline color (derived from loss effect)
+                    tokData["bgColor"] || "#fff",       // background color (derived from feature activation)
+                    tokData["isBold"] || false,         // is this token bolded?
+                    tokData["featAct"] || 0.0,          // feature activation at this token (used for acts histogram line)
+                    tokData["tokenLogit"] || 0.0,       // raw logit effect on this token (used for logits histogram line)
+                    tokData["lossEffect"] || 0.0,       // effect on loss (used for histogram line), if prev token active
+                    tokData["posToks"] || [],           // most-positive tokens (strings)
+                    tokData["posVal"] || [],            // most-positive token values
+                    tokData["negToks"] || [],           // most-negative tokens (strings)
+                    tokData["negVal"] || [],            // most-negative token values
+                    tokData["permanentLine"] || false,  // do we show a permanent line on histogram?
+                    tokData["hide"] || false,           // do we suppress hoverdata for this token?
+                    idSuffix,                           // suffix for the histogram ID which the hoverline will be added to
+                );
+            });
+        });
+    
+        const t1 = performance.now(); // End timing
+        console.log(`HTML for ${seqGroupID} generated in ${(t1 - t0).toFixed(1)} ms`);
+    });
+}
+
+function defineData() {
+    // Returns the data - see the docstring of the Python HTML class to understand the structure of this object.
+
+    return {"AGGDATA": {"max": [48.25], "frac_nonzero": [0.0358], "skew": [], "kurtosis": []}, "DASHBOARD_DATA": {"3086": {"actsHistogramData": {"0": {"y": [483, 1031, 1400, 1447, 1510, 1318, 1099, 978, 746, 626, 490, 364, 269, 230, 167, 143, 106, 89, 76, 56, 42, 26, 20, 12, 12, 19, 6, 9, 5, 7, 5, 1, 3, 0, 0, 1, 2, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1], "x": [3.59172, 4.49391, 5.39609, 6.29828, 7.20047, 8.10266, 9.00484, 9.90703, 10.80922, 11.71141, 12.61359, 13.51578, 14.41797, 15.32016, 16.22235, 17.12453, 18.02672, 18.92891, 19.83109, 20.73328, 21.63547, 22.53766, 23.43984, 24.34203, 25.24422, 26.14641, 27.04859, 27.95078, 28.85297, 29.75516, 30.65734, 31.55953, 32.46172, 33.36391, 34.26609, 35.16828, 36.07047, 36.97266, 37.87484, 38.77703, 39.67922, 40.58141, 41.4836, 42.38578, 43.28797, 44.19016, 45.09235, 45.99453, 46.89672, 47.79891], "ticks": [0, 16.0, 32.0, 48.0], "colors": ["#ffcc8e", "#ffcb8b", "#ffc988", "#ffc885", "#ffc782", "#ffc57f", "#ffc47c", "#ffc379", "#ffc176", "#ffc073", "#ffbf71", "#ffbe6e", "#ffbc6b", "#ffbb68", "#ffba65", "#ffb862", "#ffb75f", "#ffb55c", "#ffb459", "#ffb356", "#ffb254", "#ffb151", "#ffaf4e", "#ffae4b", "#ffac48", "#ffab45", "#ffaa42", "#ffa83f", "#ffa73c", "#ffa639", "#ffa537", "#ffa334", "#ffa231", "#ffa12e", "#ff9f2b", "#ff9e28", "#ff9d25", "#ff9b22", "#ff9a1f", "#ff991c", "#ff981a", "#ff9617", "#ff9514", "#ff9411", "#ff920e", "#ff910b", "#ff9008", "#ff8e05", "#ff8d02", "#ff8c00"], "title": "ACTIVATIONS<br>DENSITY = 3.580%"}}, "logitsATableData": {"0": {"negLogits": [{"symbol": "eltemperaturen", "value": -0.0, "color": "rgba(255,0,0,0.5)"}, {"symbol": "\u2581expert", "value": -0.0, "color": "rgba(255,15,15,0.5)"}, {"symbol": "\u2581experts", "value": -0.0, "color": "rgba(255,18,18,0.5)"}, {"symbol": "\u2581fog", "value": -0.0, "color": "rgba(255,18,18,0.5)"}], "posLogits": [{"symbol": "\u2581shr", "value": 0.0, "color": "rgba(9,9,255,0.5)"}, {"symbol": "<'", "value": 0.0, "color": "rgba(16,16,255,0.5)"}, {"symbol": "ishment", "value": 0.0, "color": "rgba(33,33,255,0.5)"}, {"symbol": "nals", "value": 0.0, "color": "rgba(42,42,255,0.5)"}]}}, "logitsBTableData": {"0": {"negLogits": [{"symbol": "\u2581gesch", "value": -0.0, "color": "rgba(255,26,26,0.5)"}, {"symbol": "\u2581declined", "value": -0.0, "color": "rgba(255,30,30,0.5)"}, {"symbol": "\u2581\u0421\u0442\u0430\u043d\u043e\u0432\u043d\u0438\u0448\u0442\u0432\u043e", "value": -0.0, "color": "rgba(255,31,31,0.5)"}, {"symbol": "eltemperaturen", "value": -0.0, "color": "rgba(255,31,31,0.5)"}], "posLogits": [{"symbol": "\u2581quietly", "value": 0.0, "color": "rgba(0,0,255,0.5)"}, {"symbol": "\u2581Singh", "value": 0.0, "color": "rgba(15,15,255,0.5)"}, {"symbol": "^^", "value": 0.0, "color": "rgba(18,18,255,0.5)"}, {"symbol": "\u2581Supp", "value": 0.0, "color": "rgba(22,22,255,0.5)"}]}}, "featureTablesData": {"0": {"decoderCosineSim": [{"value": "+0.559"}], "relativeDecoderStrength": [{"index": "Base", "value": "+0.101"}, {"index": "Finetuned", "value": "+0.902"}]}}, "tokenData": {"seq-group-1-0": {"data": [[{"tok": "\u2581of", "tokID": 1070, "tokenLogit": 0.0, "isBold": false, "posToks": ["share", "([]", "ishment", "pon", "',"], "negToks": ["eltemperaturen", "\u2581\u0441\u043f\u043e", "\u2581expert", "(\\", "param"], "posVal": [0.1875, 0.1875, 0.1875, 0.125, 0.125], "negVal": [-0.1875, -0.1875, -0.1875, -0.125, -0.125], "lossEffect": -0.0, "uColor": "rgb(255,255,255)"}, {"tok": "\u2581oct", "tokID": 10309, "tokenLogit": 0.0001, "isBold": false}, {"tok": "ober", "tokID": 3278, "tokenLogit": 0.0001, "isBold": false, "featAct": 20.375, "bgColor": "#ffce93"}, {"tok": "\u2581", "tokID": 29473, "tokenLogit": 0.0, "isBold": false, "featAct": 10.3125, "bgColor": "#ffe7c9", "posToks": ["ocument", "ract", "\u2581Kr", "ishment", "\u2581Such"], "negToks": ["\u2581expert", "\u2581r\u00e9", "\u2581Philip", "\u2581\u0441\u043f\u043e", "\u2581films"], "posVal": [0.1875, 0.1875, 0.1875, 0.1875, 0.1875], "negVal": [-0.1875, -0.1875, -0.1875, -0.1875, -0.1875], "lossEffect": -0.0, "uColor": "rgb(255,255,255)"}, {"tok": "1", "tokID": 29508, "tokenLogit": 0.0001, "isBold": false, "posToks": ["<0x87>", "<0x86>", "<0x97>", "<0x9F>", "<0x9E>"], "negToks": ["<0xB3>", "<0xA0>", "<0xD5>", "or", "\u2581t"], "posVal": [0.0625, 0.0625, 0.0625, 0.0625, 0.0625], "negVal": [-0.0625, -0.0625, -0.0625, -0.0625, -0.0625], "lossEffect": -0.0625, "uColor": "rgb(239,239,255)"}, {"tok": "\u2581,", "tokID": 1968, "tokenLogit": 0.0, "isBold": true, "featAct": 48.25, "bgColor": "#ff8c00"}, {"tok": "\u2581", "tokID": 29473, "tokenLogit": 0.0, "isBold": false, "posToks": ["<'", "\u2581shr", "ishment", "depend", "usion"], "negToks": ["eltemperaturen", "\u2581\u0441\u043f\u043e", "\u2581fog", "\u2581experts", "\u2581expert"], "posVal": [0.5, 0.5, 0.5, 0.4375, 0.4375], "negVal": [-0.5, -0.5, -0.4375, -0.4375, -0.4375], "lossEffect": -0.0, "uColor": "rgb(255,255,255)"}, {"tok": "2", "tokID": 29518, "tokenLogit": 0.0, "isBold": false}, {"tok": "0", "tokID": 29502, "tokenLogit": 0.0, "isBold": false}, {"tok": "0", "tokID": 29502, "tokenLogit": 0.0, "isBold": false}, {"tok": "1", "tokID": 29508, "tokenLogit": 0.0001, "isBold": false}], [{"tok": "\u2581effective", "tokID": 6413, "tokenLogit": -0.0001, "isBold": false, "posToks": ["<0x9D>", "<0x87>", "<0xA5>", "<0xCB>", "<0xB7>"], "negToks": ["<0x80>", "<0x09>", "<0x83>", "<0xA1>", "<0x8D>"], "posVal": [0.0625, 0.0625, 0.0625, 0.0625, 0.0625], "negVal": [-0.0625, -0.0625, -0.0625, -0.0625, -0.0625], "lossEffect": -0.0, "uColor": "rgb(255,255,255)"}, {"tok": "\u2581j", "tokID": 1229, "tokenLogit": -0.0001, "isBold": false}, {"tok": "une", "tokID": 2570, "tokenLogit": -0.0, "isBold": false}, {"tok": "\u2581", "tokID": 29473, "tokenLogit": 0.0, "isBold": false}, {"tok": "1", "tokID": 29508, "tokenLogit": 0.0001, "isBold": false}, {"tok": "\u2581,", "tokID": 1968, "tokenLogit": 0.0, "isBold": true, "featAct": 37.0, "bgColor": "#ffa73b"}, {"tok": "\u2581", "tokID": 29473, "tokenLogit": 0.0, "isBold": false, "posToks": ["\u2581shr", "<'", "usion", "\u2581assets", "ishment"], "negToks": ["\u2581experts", "\u2581expert", "\u2581fog", "eltemperaturen", "\u2581\u0441\u043f\u043e"], "posVal": [0.375, 0.3125, 0.3125, 0.3125, 0.3125], "negVal": [-0.375, -0.375, -0.375, -0.375, -0.3125], "lossEffect": -0.0, "uColor": "rgb(255,255,255)"}, {"tok": "2", "tokID": 29518, "tokenLogit": 0.0, "isBold": false}, {"tok": "0", "tokID": 29502, "tokenLogit": 0.0, "isBold": false}, {"tok": "1", "tokID": 29508, "tokenLogit": 0.0001, "isBold": false}, {"tok": "3", "tokID": 29538, "tokenLogit": -0.0, "isBold": false}], [{"tok": "\u2581of", "tokID": 1070, "tokenLogit": 0.0, "isBold": false, "posToks": ["iddle", "ocument", "usion", "\u2581Such", "\"><"], "negToks": ["\u2581}}", "\u2581finger", "]))", "\u2581beim", "\u2581fog"], "posVal": [0.125, 0.125, 0.125, 0.125, 0.125], "negVal": [-0.125, -0.125, -0.125, -0.125, -0.125], "lossEffect": -0.0, "uColor": "rgb(255,255,255)"}, {"tok": "\u2581december", "tokID": 22923, "tokenLogit": 0.0, "isBold": false, "featAct": 21.625, "bgColor": "#ffcc8d"}, {"tok": "\u2581", "tokID": 29473, "tokenLogit": 0.0, "isBold": false, "featAct": 6.9688, "bgColor": "#ffefdb", "posToks": ["\u2581might", "ittle", "ributes", "\u2581occup", "unit"], "negToks": ["\u2581kne", "\u2581expert", "\u2581\u043f\u0456\u0434", "isi\u00f3n", "\u2581experts"], "posVal": [0.1875, 0.1875, 0.1875, 0.1875, 0.1875], "negVal": [-0.1875, -0.1875, -0.1875, -0.1875, -0.1875], "lossEffect": -0.0, "uColor": "rgb(255,255,255)"}, {"tok": "3", "tokID": 29538, "tokenLogit": -0.0, "isBold": false, "featAct": 9.1875, "bgColor": "#ffe9cf", "posToks": ["<0x97>", "<0x93>", "<0x99>", "<0x9E>", "<0x9B>"], "negToks": ["<0xC5>", "<0x09>", "<0xC6>", "\u2581\"", "\u2581c"], "posVal": [0.0625, 0.0625, 0.0625, 0.0625, 0.0625], "negVal": [-0.0625, -0.0625, -0.0625, -0.0625, -0.0625], "lossEffect": -0.0, "uColor": "rgb(255,255,255)"}, {"tok": "1", "tokID": 29508, "tokenLogit": 0.0001, "isBold": false, "featAct": 8.3125, "bgColor": "#ffebd3", "posToks": ["\u2581shr", "<0x8F>", "<0x87>", "<0xA8>", "<0x89>"], "negToks": ["\u2581GPS", "\u2581fog", "\u2581\u0441\u043f\u043e", "<0x81>", "<0x00>"], "posVal": [0.125, 0.0625, 0.0625, 0.0625, 0.0625], "negVal": [-0.125, -0.125, -0.125, -0.0625, -0.0625], "lossEffect": -0.0, "uColor": "rgb(255,255,255)"}, {"tok": "\u2581,", "tokID": 1968, "tokenLogit": 0.0, "isBold": true, "featAct": 36.25, "bgColor": "#ffa83f", "posToks": ["<0x89>", "<0x87>", "<0x97>", "<0x9B>", "<0x99>"], "negToks": ["\u2581fog", "<0x80>", "<0x09>", "<0x81>", "<0x0A>"], "posVal": [0.0625, 0.0625, 0.0625, 0.0625, 0.0625], "negVal": [-0.125, -0.0625, -0.0625, -0.0625, -0.0625], "lossEffect": -0.0, "uColor": "rgb(255,255,255)"}, {"tok": "\u2581", "tokID": 29473, "tokenLogit": 0.0, "isBold": false, "posToks": ["\u2581shr", "ishment", "<'", "\u2581countr", "ocument"], "negToks": ["\u2581experts", "\u2581expert", "\u2581fog", "eltemperaturen", "\u2581kne"], "posVal": [0.375, 0.375, 0.375, 0.375, 0.3125], "negVal": [-0.375, -0.375, -0.375, -0.375, -0.3125], "lossEffect": -0.0, "uColor": "rgb(255,255,255)"}, {"tok": "2", "tokID": 29518, "tokenLogit": 0.0, "isBold": false, "featAct": 7.5938, "bgColor": "#ffedd7"}, {"tok": "0", "tokID": 29502, "tokenLogit": 0.0, "isBold": false, "posToks": ["<0x8F>", "<0x87>", "<0x9E>", "<0xA9>", "<0x9F>"], "negToks": ["<0xA1>", "<0x80>", "<0xCF>", "\u2581t", "<0xD0>"], "posVal": [0.0625, 0.0625, 0.0625, 0.0625, 0.0625], "negVal": [-0.0625, -0.0625, -0.0625, -0.0625, -0.0625], "lossEffect": -0.0, "uColor": "rgb(255,255,255)"}, {"tok": "0", "tokID": 29502, "tokenLogit": 0.0, "isBold": false}, {"tok": "8", "tokID": 29551, "tokenLogit": 0.0001, "isBold": false}], [{"tok": "\u2581consisted", "tokID": 25479, "tokenLogit": 0.0, "isBold": false, "featAct": 13.0, "bgColor": "#ffe0bb", "posToks": ["ocument", "ittle", "usion", "\u2581Stud", "ributes"], "negToks": ["}_{", "(\\", "gamma", "\u2581race", "\u2581\u0432\u044b"], "posVal": [0.125, 0.125, 0.125, 0.125, 0.125], "negVal": [-0.125, -0.125, -0.125, -0.125, -0.125], "lossEffect": -0.0, "uColor": "rgb(255,255,255)"}, {"tok": "\u2581of", "tokID": 1070, "tokenLogit": 0.0, "isBold": false, "featAct": 11.0, "bgColor": "#ffe5c5", "posToks": ["\u2581Software", "\u0434\u0435", "\u2581Lie", "\u2581closely", "depend"], "negToks": ["FIG", "\u2581\u043d\u043e", "\u2581invent", "isi\u00f3n", "\u2581vic"], "posVal": [0.125, 0.125, 0.125, 0.125, 0.125], "negVal": [-0.125, -0.125, -0.125, -0.125, -0.125], "lossEffect": -0.0, "uColor": "rgb(255,255,255)"}, {"tok": "\u2581the", "tokID": 1040, "tokenLogit": -0.0, "isBold": false, "featAct": 9.0, "bgColor": "#ffead0", "posToks": [";/", "<'", "\u2581shr", "<0x87>", "[/INST]"], "negToks": ["\u2581Nintendo", "iane", "<0x95>", "<0x8D>", "<0x09>"], "posVal": [0.125, 0.125, 0.125, 0.0625, 0.0625], "negVal": [-0.125, -0.125, -0.0625, -0.0625, -0.0625], "lossEffect": -0.0, "uColor": "rgb(255,255,255)"}, {"tok": "\u2581following", "tokID": 3064, "tokenLogit": 0.0, "isBold": false, "featAct": 20.625, "bgColor": "#ffce92", "posToks": ["<0x97>", "<0x87>", "<0x99>", "<0x9B>", "<0x9A>"], "negToks": ["\u2581Duke", "<0xC5>", "<0x84>", "<0xC6>", "<0xB3>"], "posVal": [0.0625, 0.0625, 0.0625, 0.0625, 0.0625], "negVal": [-0.125, -0.0625, -0.0625, -0.0625, -0.0625], "lossEffect": -0.0, "uColor": "rgb(255,255,255)"}, {"tok": "\u2581at", "tokID": 1206, "tokenLogit": 0.0, "isBold": false, "featAct": 8.75, "bgColor": "#ffead1", "posToks": ["\u2581shr", "depend", "<'", "LAB", "share"], "negToks": ["\u2581kne", "\u2581expert", "\u2581\u0441\u043f\u043e", "\u2581fog", "\u2581experts"], "posVal": [0.1875, 0.1875, 0.1875, 0.1875, 0.1875], "negVal": [-0.1875, -0.1875, -0.1875, -0.1875, -0.1875], "lossEffect": -0.0, "uColor": "rgb(255,255,255)"}, {"tok": "\u2581december", "tokID": 22923, "tokenLogit": 0.0, "isBold": true, "featAct": 35.75, "bgColor": "#ffaa42", "posToks": ["<0x99>", "<0x87>", "<0x9E>", "<0xB6>", "<0xA9>"], "negToks": ["<0xC5>", "<0xA1>", "<0xD0>", "<0xE2>", "<0xD1>"], "posVal": [0.0625, 0.0625, 0.0625, 0.0625, 0.0625], "negVal": [-0.0625, -0.0625, -0.0625, -0.0625, -0.0625], "lossEffect": -0.0, "uColor": "rgb(255,255,255)"}, {"tok": "\u2581", "tokID": 29473, "tokenLogit": 0.0, "isBold": false, "featAct": 8.875, "bgColor": "#ffead0", "posToks": ["\u2581shr", "usion", "<'", "\u2581countr", "<0xE8>"], "negToks": ["\u2581fog", "\u2581\u043d\u043e", "}_{", "FIG", "\u2581\u0432\u044b"], "posVal": [0.3125, 0.3125, 0.3125, 0.3125, 0.25], "negVal": [-0.3125, -0.25, -0.25, -0.25, -0.25], "lossEffect": -0.0, "uColor": "rgb(255,255,255)"}, {"tok": "3", "tokID": 29538, "tokenLogit": -0.0, "isBold": false, "featAct": 13.875, "bgColor": "#ffdeb6", "posToks": ["<0x9F>", "<0x97>", "<0xA9>", "<0xAB>", "<0xAA>"], "negToks": ["<0xCD>", "<0x80>", "<0xD1>", "\u2581p", "<0xE2>"], "posVal": [0.0625, 0.0625, 0.0625, 0.0625, 0.0625], "negVal": [-0.0625, -0.0625, -0.0625, -0.0625, -0.0625], "lossEffect": -0.0625, "uColor": "rgb(239,239,255)"}, {"tok": "1", "tokID": 29508, "tokenLogit": 0.0001, "isBold": false, "featAct": 7.6875, "bgColor": "#ffedd7", "posToks": ["\u2581earth", "pon", "ieder", "\u2581\u2212", "Compat"], "negToks": ["\u2581\u043d\u043e", "(\\", "Phi", "\u2581\u0441\u043f\u043e", "\u2581\u043f\u0456\u0434"], "posVal": [0.125, 0.125, 0.125, 0.125, 0.125], "negVal": [-0.125, -0.125, -0.125, -0.125, -0.125], "lossEffect": -0.0, "uColor": "rgb(255,255,255)"}, {"tok": ":", "tokID": 29515, "tokenLogit": -0.0, "isBold": false, "posToks": ["<0x8A>", "<0x88>", "<0x99>", "<0xA5>", "<0x9B>"], "negToks": ["<0x95>", "<0x0A>", "<0xA1>", "<0xC5>", "<0xB0>"], "posVal": [0.0625, 0.0625, 0.0625, 0.0625, 0.0625], "negVal": [-0.0625, -0.0625, -0.0625, -0.0625, -0.0625], "lossEffect": 0.0625, "uColor": "rgb(255,239,239)"}, {"tok": "\u2581.", "tokID": 1610, "tokenLogit": 0.0, "isBold": false, "featAct": 9.5625, "bgColor": "#ffe8cd"}], [{"tok": "\u2581future", "tokID": 4205, "tokenLogit": 0.0001, "isBold": false}, {"tok": "\u2581grant", "tokID": 13922, "tokenLogit": -0.0, "isBold": false}, {"tok": "\u2581as", "tokID": 1158, "tokenLogit": -0.0, "isBold": false, "featAct": 10.9375, "bgColor": "#ffe5c5"}, {"tok": "\u2581of", "tokID": 1070, "tokenLogit": 0.0, "isBold": false, "featAct": 6.9375, "bgColor": "#ffefdb", "posToks": ["ishment", "uding", "\u2581shr", "lab", "([]"], "negToks": ["\u2581\u043f\u0435\u0440", "\u2581auf", "\u2581experts", "\u2581Duke", "\u2581vida"], "posVal": [0.125, 0.125, 0.125, 0.125, 0.125], "negVal": [-0.125, -0.125, -0.125, -0.125, -0.125], "lossEffect": -0.0, "uColor": "rgb(255,255,255)"}, {"tok": "\u2581may", "tokID": 1761, "tokenLogit": 0.0001, "isBold": false, "featAct": 14.8125, "bgColor": "#ffdcb1", "posToks": ["<0x8E>", "<0x8D>", "<0x97>", "<0x9D>", "<0x9B>"], "negToks": ["<0x91>", "<0x80>", "<0x98>", "im", "<0xA7>"], "posVal": [0.0625, 0.0625, 0.0625, 0.0625, 0.0625], "negVal": [-0.0625, -0.0625, -0.0625, -0.0625, -0.0625], "lossEffect": -0.0625, "uColor": "rgb(239,239,255)"}, {"tok": "\u2581", "tokID": 29473, "tokenLogit": 0.0, "isBold": true, "featAct": 35.0, "bgColor": "#ffac46", "posToks": ["ish", "<0xAA>", "\u2581follow", "ird", "ract"], "negToks": ["\u2581currently", "\u2581Paul", "FIG", "\u2581\u043f\u0435\u0440", "\u2581expert"], "posVal": [0.125, 0.125, 0.125, 0.125, 0.125], "negVal": [-0.125, -0.125, -0.125, -0.125, -0.125], "lossEffect": -0.0, "uColor": "rgb(255,255,255)"}, {"tok": "3", "tokID": 29538, "tokenLogit": -0.0, "isBold": false, "featAct": 10.1875, "bgColor": "#ffe7c9", "posToks": ["depend", "usion", "<'", "LAB", "\u2581Dans"], "negToks": ["\u2581Duke", "\u2581\u0441\u043f\u043e", "\u2581dude", "\u2581navigate", "\u2581zo"], "posVal": [0.25, 0.25, 0.25, 0.25, 0.25], "negVal": [-0.25, -0.25, -0.25, -0.25, -0.25], "lossEffect": -0.0, "uColor": "rgb(255,255,255)"}, {"tok": "1", "tokID": 29508, "tokenLogit": 0.0001, "isBold": false, "featAct": 7.9688, "bgColor": "#ffecd5", "posToks": ["ishment", "\u2581sont", "<'", "flu", "\u2581Imper"], "negToks": ["\u2581expert", "\u2581\u0432\u044b", "\u2581films", "\u2581experts", "\u2581elem"], "posVal": [0.125, 0.125, 0.125, 0.125, 0.125], "negVal": [-0.125, -0.125, -0.125, -0.125, -0.125], "lossEffect": -0.0, "uColor": "rgb(255,255,255)"}, {"tok": "\u2581,", "tokID": 1968, "tokenLogit": 0.0, "isBold": false, "posToks": ["Great", "ishment", "[control_8]", "[/AVAILABLE_TOOLS]", "<unk>"], "negToks": ["<0xB0>", "<0xA7>", "<0xB3>", "<0xC8>", "<0xC6>"], "posVal": [0.125, 0.125, 0.0625, 0.0625, 0.0625], "negVal": [-0.0625, -0.0625, -0.0625, -0.0625, -0.0625], "lossEffect": -0.0625, "uColor": "rgb(239,239,255)"}, {"tok": "\u2581", "tokID": 29473, "tokenLogit": 0.0, "isBold": false}, {"tok": "2", "tokID": 29518, "tokenLogit": 0.0, "isBold": false, "featAct": 6.375, "bgColor": "#fff0de"}], [{"tok": "\u2581", "tokID": 29473, "tokenLogit": 0.0, "isBold": false}, {"tok": "2", "tokID": 29518, "tokenLogit": 0.0, "isBold": false}, {"tok": "0", "tokID": 29502, "tokenLogit": 0.0, "isBold": false}, {"tok": "1", "tokID": 29508, "tokenLogit": 0.0001, "isBold": false}, {"tok": "d", "tokID": 29483, "tokenLogit": -0.0, "isBold": false}, {"tok": "\u2581as", "tokID": 1158, "tokenLogit": -0.0, "isBold": true, "featAct": 32.25, "bgColor": "#ffb254"}, {"tok": "\u2581of", "tokID": 1070, "tokenLogit": 0.0, "isBold": false, "featAct": 23.0, "bgColor": "#ffc885", "posToks": ["\u2581shr", "\u2581earth", "usion", "\u2581Such", "ributes"], "negToks": ["Func", "\u2581expert", "\u2581\u043f\u0456\u0434", "\u2581experts", "\u2581\u0441\u043f\u043e"], "posVal": [0.3125, 0.25, 0.25, 0.25, 0.25], "negVal": [-0.25, -0.25, -0.25, -0.25, -0.25], "lossEffect": -0.0, "uColor": "rgb(255,255,255)"}, {"tok": "\u2581", "tokID": 29473, "tokenLogit": 0.0, "isBold": false, "featAct": 16.25, "bgColor": "#ffd8a9", "posToks": ["\u2581Confeder", "<'", "idth", "ever", "<0x9B>"], "negToks": ["\u2581res", "<0xCF>", "(\\", "Object", "_{\\"], "posVal": [0.1875, 0.1875, 0.125, 0.125, 0.125], "negVal": [-0.125, -0.125, -0.125, -0.125, -0.125], "lossEffect": -0.0, "uColor": "rgb(255,255,255)"}, {"tok": "2", "tokID": 29518, "tokenLogit": 0.0, "isBold": false, "posToks": ["reed", "ittle", "ief", "\u2581earth", "fol"], "negToks": ["\u2581fold", "\u2581\u043d\u043e", "\u2581elem", "\u2581\u043f\u0456\u0434", "\u2581\u043f\u043e\u043b\u0443"], "posVal": [0.125, 0.125, 0.125, 0.125, 0.125], "negVal": [-0.125, -0.125, -0.125, -0.125, -0.125], "lossEffect": -0.0, "uColor": "rgb(255,255,255)"}, {"tok": "0", "tokID": 29502, "tokenLogit": 0.0, "isBold": false}, {"tok": "1", "tokID": 29508, "tokenLogit": 0.0001, "isBold": false}], [{"tok": "for", "tokID": 2160, "tokenLogit": -0.0, "isBold": false}, {"tok": "\u2581the", "tokID": 1040, "tokenLogit": -0.0, "isBold": false}, {"tok": "\u2581three", "tokID": 2480, "tokenLogit": -0.0001, "isBold": false}, {"tok": "\u2581years", "tokID": 2035, "tokenLogit": 0.0, "isBold": false, "featAct": 13.625, "bgColor": "#ffdfb7"}, {"tok": "\u2581ended", "tokID": 7822, "tokenLogit": -0.0, "isBold": false, "featAct": 10.9375, "bgColor": "#ffe5c5", "posToks": ["\u2581author", "ract", "usion", "\u2581earth", "\u2581\u043e\u0441"], "negToks": ["Phi", "\u2581\u0432\u044b", "\u2581rough", "\u2581seeking", "\u2581elem"], "posVal": [0.125, 0.125, 0.125, 0.125, 0.125], "negVal": [-0.125, -0.125, -0.125, -0.125, -0.125], "lossEffect": -0.0, "uColor": "rgb(255,255,255)"}, {"tok": "\u2581september", "tokID": 26262, "tokenLogit": 0.0001, "isBold": true, "featAct": 32.25, "bgColor": "#ffb254", "posToks": ["<'", "<0x8A>", "<0x87>", "<0x8C>", "<0x89>"], "negToks": ["\u2581k\u00f6r", "\u2581bitmap", "\u2581GPS", "<0x80>", "<0x09>"], "posVal": [0.125, 0.0625, 0.0625, 0.0625, 0.0625], "negVal": [-0.125, -0.125, -0.125, -0.0625, -0.0625], "lossEffect": -0.0, "uColor": "rgb(255,255,255)"}, {"tok": "\u2581", "tokID": 29473, "tokenLogit": 0.0, "isBold": false, "posToks": ["ributes", "usion", "depend", "ishment", "etr"], "negToks": ["eltemperaturen", "\u2581expert", "\u2581auf", "\u2581\u043f\u0435\u0440", "\u2581r\u00e9"], "posVal": [0.25, 0.25, 0.25, 0.25, 0.25], "negVal": [-0.3125, -0.25, -0.25, -0.25, -0.25], "lossEffect": -0.0, "uColor": "rgb(255,255,255)"}, {"tok": "2", "tokID": 29518, "tokenLogit": 0.0, "isBold": false}, {"tok": "5", "tokID": 29550, "tokenLogit": 0.0001, "isBold": false}, {"tok": "\u2581,", "tokID": 1968, "tokenLogit": 0.0, "isBold": false}, {"tok": "\u2581", "tokID": 29473, "tokenLogit": 0.0, "isBold": false}], [{"tok": "\u2581uncertain", "tokID": 13286, "tokenLogit": -0.0001, "isBold": false}, {"tok": "\u2581tax", "tokID": 4715, "tokenLogit": -0.0, "isBold": false, "featAct": 8.75, "bgColor": "#ffead1"}, {"tok": "\u2581positions", "tokID": 9929, "tokenLogit": 0.0, "isBold": false, "featAct": 9.375, "bgColor": "#ffe9ce", "posToks": ["Sorry", "\u2581shr", "<0x9B>", "<0x97>", "<0x8C>"], "negToks": ["\u2581zo", "\u2581tiempo", "\u2581expert", "<0x85>", "<0x09>"], "posVal": [0.125, 0.125, 0.0625, 0.0625, 0.0625], "negVal": [-0.125, -0.125, -0.125, -0.0625, -0.0625], "lossEffect": -0.0, "uColor": "rgb(255,255,255)"}, {"tok": "\u2581as", "tokID": 1158, "tokenLogit": -0.0, "isBold": false, "featAct": 25.0, "bgColor": "#ffc37b", "posToks": ["<0x89>", "[/TOOL_RESULTS]", "<0x97>", "<0x9E>", "<0x9B>"], "negToks": ["\u2581experts", "<0xA7>", "<0x09>", "<0xC6>", "<0xA1>"], "posVal": [0.0625, 0.0625, 0.0625, 0.0625, 0.0625], "negVal": [-0.125, -0.0625, -0.0625, -0.0625, -0.0625], "lossEffect": -0.0, "uColor": "rgb(255,255,255)"}, {"tok": "\u2581of", "tokID": 1070, "tokenLogit": 0.0, "isBold": false, "posToks": ["ributes", "usion", "\u2581closely", "\u2581shr", "ishment"], "negToks": ["\u2581Duke", "\u2581experts", "\u2581phenomen", "Chunk", "\u2581fog"], "posVal": [0.1875, 0.1875, 0.1875, 0.1875, 0.1875], "negVal": [-0.1875, -0.1875, -0.1875, -0.1875, -0.1875], "lossEffect": -0.0, "uColor": "rgb(255,255,255)"}, {"tok": "\u2581december", "tokID": 22923, "tokenLogit": 0.0, "isBold": true, "featAct": 32.25, "bgColor": "#ffb254"}, {"tok": "\u2581", "tokID": 29473, "tokenLogit": 0.0, "isBold": false, "posToks": ["<'", "depend", "ract", "ishment", "usion"], "negToks": ["eltemperaturen", "\u2581kne", "\u2581auf", "\u2581elem", "\u2581expert"], "posVal": [0.3125, 0.25, 0.25, 0.25, 0.25], "negVal": [-0.3125, -0.25, -0.25, -0.25, -0.25], "lossEffect": -0.0, "uColor": "rgb(255,255,255)"}, {"tok": "3", "tokID": 29538, "tokenLogit": -0.0, "isBold": false, "featAct": 16.5, "bgColor": "#ffd8a8"}, {"tok": "1", "tokID": 29508, "tokenLogit": 0.0001, "isBold": false, "featAct": 10.1875, "bgColor": "#ffe7c9", "posToks": ["ext", "ait", "\u2581follow", "urs", "ats"], "negToks": ["\u2581sl", "\u2581fin", "pert", "\u2581...", "\u2581r\u00e9"], "posVal": [0.125, 0.125, 0.125, 0.125, 0.125], "negVal": [-0.125, -0.125, -0.125, -0.125, -0.125], "lossEffect": -0.0, "uColor": "rgb(255,255,255)"}, {"tok": "\u2581,", "tokID": 1968, "tokenLogit": 0.0, "isBold": false, "featAct": 17.375, "bgColor": "#ffd6a3", "posToks": ["usion", "ocument", "\u2581\"@", "LAB", "flu"], "negToks": ["\u2581\u0441\u043f\u043e", "\u2581films", "\u2581experts", "\u2581disp", "\u2581wrapped"], "posVal": [0.125, 0.125, 0.125, 0.125, 0.125], "negVal": [-0.125, -0.125, -0.125, -0.125, -0.125], "lossEffect": -0.0, "uColor": "rgb(255,255,255)"}, {"tok": "\u2581", "tokID": 29473, "tokenLogit": 0.0, "isBold": false, "posToks": ["\u2581countr", "\u2581shr", "\u2581ap", "<0xC7>", "<0x87>"], "negToks": ["\u2581experts", "\u2581expert", "\u2581tiempo", "\u2581k\u00f6r", "\u2581deemed"], "posVal": [0.1875, 0.1875, 0.125, 0.125, 0.125], "negVal": [-0.1875, -0.1875, -0.1875, -0.1875, -0.1875], "lossEffect": -0.0, "uColor": "rgb(255,255,255)"}], [{"tok": "7", "tokID": 29555, "tokenLogit": 0.0, "isBold": false}, {"tok": ".", "tokID": 29491, "tokenLogit": 0.0001, "isBold": false}, {"tok": "3", "tokID": 29538, "tokenLogit": -0.0, "isBold": false}, {"tok": "\u2581as", "tokID": 1158, "tokenLogit": -0.0, "isBold": false, "featAct": 18.625, "bgColor": "#ffd39d"}, {"tok": "\u2581of", "tokID": 1070, "tokenLogit": 0.0, "isBold": false, "posToks": ["serv", "<0xE8>", "requ", "thers", "ocument"], "negToks": ["\u2581\u043d\u043e", "Object", "\u2581currently", "\u2581expert", "FIG"], "posVal": [0.125, 0.125, 0.125, 0.125, 0.125], "negVal": [-0.125, -0.125, -0.125, -0.125, -0.125], "lossEffect": -0.0625, "uColor": "rgb(239,239,255)"}, {"tok": "\u2581december", "tokID": 22923, "tokenLogit": 0.0, "isBold": true, "featAct": 31.875, "bgColor": "#ffb356"}, {"tok": "\u2581", "tokID": 29473, "tokenLogit": 0.0, "isBold": false, "featAct": 12.8125, "bgColor": "#ffe1bc", "posToks": ["\u2581closely", "depend", "ishment", "<'", "\u2581shr"], "negToks": ["\u2581\u043f\u0435\u0440", "\u2581expert", "\u2581\u0441\u043f\u043e", "isi\u00f3n", "\u2581experts"], "posVal": [0.25, 0.25, 0.25, 0.25, 0.25], "negVal": [-0.25, -0.25, -0.25, -0.25, -0.25], "lossEffect": -0.0625, "uColor": "rgb(239,239,255)"}, {"tok": "3", "tokID": 29538, "tokenLogit": -0.0, "isBold": false, "featAct": 13.125, "bgColor": "#ffe0ba", "posToks": ["</s>", "<unk>", "[control_8]", "[control_10]", "[control_9]"], "negToks": ["<0xA1>", "<0x80>", "<0xD0>", "\u2581l", "\u2581c"], "posVal": [0.0625, 0.0625, 0.0625, 0.0625, 0.0625], "negVal": [-0.0625, -0.0625, -0.0625, -0.0625, -0.0625], "lossEffect": -0.0, "uColor": "rgb(255,255,255)"}, {"tok": "1", "tokID": 29508, "tokenLogit": 0.0001, "isBold": false, "featAct": 8.9375, "bgColor": "#ffead0", "posToks": ["ract", "ittle", "ird", "\u2581author", "ocument"], "negToks": ["\u2581expert", "\u2581\u043d\u043e", "\u2581Philip", "\u2581finger", "\u2581songs"], "posVal": [0.125, 0.125, 0.125, 0.125, 0.125], "negVal": [-0.125, -0.125, -0.125, -0.125, -0.125], "lossEffect": -0.0, "uColor": "rgb(255,255,255)"}, {"tok": "\u2581,", "tokID": 1968, "tokenLogit": 0.0, "isBold": false, "featAct": 11.125, "bgColor": "#ffe4c4", "posToks": ["lif", "usion", "ocument", "[/TOOL_RESULTS]", "<unk>"], "negToks": ["eltemperaturen", "\u2581fog", "<0x81>", "<0x80>", "<0x09>"], "posVal": [0.125, 0.125, 0.125, 0.0625, 0.0625], "negVal": [-0.125, -0.125, -0.0625, -0.0625, -0.0625], "lossEffect": -0.0, "uColor": "rgb(255,255,255)"}, {"tok": "\u2581", "tokID": 29473, "tokenLogit": 0.0, "isBold": false, "featAct": 11.1875, "bgColor": "#ffe4c4", "posToks": ["ext", "<0xE8>", "serv", "ocument", "\u2581Amer"], "negToks": ["}_{", "\u2581auf", "\u2581r\u00e9", "\u2581lat", "gamma"], "posVal": [0.125, 0.125, 0.125, 0.125, 0.125], "negVal": [-0.125, -0.125, -0.125, -0.125, -0.125], "lossEffect": -0.0, "uColor": "rgb(255,255,255)"}], [{"tok": "\u2581a", "tokID": 1032, "tokenLogit": -0.0, "isBold": false}, {"tok": "\u2581significant", "tokID": 6632, "tokenLogit": -0.0, "isBold": false}, {"tok": "\u2581effect", "tokID": 2798, "tokenLogit": 0.0002, "isBold": false}, {"tok": "\u2581on", "tokID": 1124, "tokenLogit": -0.0, "isBold": false}, {"tok": "\u2581mar", "tokID": 2597, "tokenLogit": -0.0, "isBold": false}, {"tok": "athon", "tokID": 20421, "tokenLogit": 0.0, "isBold": true, "featAct": 31.0, "bgColor": "#ffb55b"}, {"tok": "\u2581", "tokID": 29473, "tokenLogit": 0.0, "isBold": false, "posToks": ["\u2581shr", "ishment", "<'", "\u2581countr", "share"], "negToks": ["\u2581experts", "\u2581expert", "\u2581fog", "\u2581zo", "iane"], "posVal": [0.3125, 0.3125, 0.3125, 0.3125, 0.3125], "negVal": [-0.3125, -0.3125, -0.3125, -0.3125, -0.3125], "lossEffect": -0.0, "uColor": "rgb(255,255,255)"}, {"tok": "2", "tokID": 29518, "tokenLogit": 0.0, "isBold": false}, {"tok": "0", "tokID": 29502, "tokenLogit": 0.0, "isBold": false}, {"tok": "1", "tokID": 29508, "tokenLogit": 0.0001, "isBold": false}, {"tok": "9", "tokID": 29542, "tokenLogit": 0.0001, "isBold": false}], [{"tok": "\u2581continue", "tokID": 4456, "tokenLogit": 0.0, "isBold": false}, {"tok": "\u2581to", "tokID": 1066, "tokenLogit": 0.0, "isBold": false}, {"tok": "\u2581support", "tokID": 2528, "tokenLogit": -0.0, "isBold": false}, {"tok": "\u2581an", "tokID": 1164, "tokenLogit": -0.0001, "isBold": false}, {"tok": "\u2581in", "tokID": 1065, "tokenLogit": -0.0, "isBold": false}, {"tok": "def", "tokID": 2038, "tokenLogit": 0.0, "isBold": true, "featAct": 31.0, "bgColor": "#ffb55b"}, {"tok": "in", "tokID": 1030, "tokenLogit": -0.0, "isBold": false, "posToks": ["\u2581shr", "\u2581closely", "ocument", "etr", "usion"], "negToks": ["eltemperaturen", "\u2581fog", "\u2581\u0441\u043f\u043e", "\u2581Philip", "\u2581expert"], "posVal": [0.3125, 0.25, 0.25, 0.25, 0.25], "negVal": [-0.3125, -0.3125, -0.25, -0.25, -0.25], "lossEffect": -0.0, "uColor": "rgb(255,255,255)"}, {"tok": "ite", "tokID": 1338, "tokenLogit": -0.0, "isBold": false}, {"tok": "\u2581life", "tokID": 2179, "tokenLogit": 0.0, "isBold": false}, {"tok": "\u2581.", "tokID": 1610, "tokenLogit": 0.0, "isBold": false}, {"tok": "<0x0A>", "tokID": 781, "tokenLogit": -0.0, "isBold": false}], [{"tok": "\u2581other", "tokID": 1567, "tokenLogit": -0.0, "isBold": false}, {"tok": "\u2581accounts", "tokID": 10623, "tokenLogit": -0.0, "isBold": false}, {"tok": "\u2581rece", "tokID": 2848, "tokenLogit": -0.0001, "isBold": false}, {"tok": "iv", "tokID": 1217, "tokenLogit": 0.0, "isBold": false}, {"tok": "able", "tokID": 1290, "tokenLogit": 0.0, "isBold": false}, {"tok": "\u2581as", "tokID": 1158, "tokenLogit": -0.0, "isBold": true, "featAct": 30.875, "bgColor": "#ffb55c"}, {"tok": "\u2581of", "tokID": 1070, "tokenLogit": 0.0, "isBold": false, "featAct": 22.125, "bgColor": "#ffca8a", "posToks": ["\u2581shr", "ishment", "<'", "\u00eet", "share"], "negToks": ["\u2581GPS", "eltemperaturen", "\u2581expert", "gamma", "\u2581auf"], "posVal": [0.25, 0.25, 0.25, 0.25, 0.25], "negVal": [-0.25, -0.25, -0.1875, -0.1875, -0.1875], "lossEffect": -0.0625, "uColor": "rgb(239,239,255)"}, {"tok": "\u2581", "tokID": 29473, "tokenLogit": 0.0, "isBold": false, "posToks": ["ait", "<0x87>", "serv", "ocument", "\u2581might"], "negToks": ["FIG", "\u2581\u043d\u043e", "\u2581p\u0159", "\u2581expert", "\u2581cer"], "posVal": [0.125, 0.125, 0.125, 0.125, 0.125], "negVal": [-0.125, -0.125, -0.125, -0.125, -0.125], "lossEffect": -0.0, "uColor": "rgb(255,255,255)"}, {"tok": "2", "tokID": 29518, "tokenLogit": 0.0, "isBold": false}, {"tok": "0", "tokID": 29502, "tokenLogit": 0.0, "isBold": false}, {"tok": "1", "tokID": 29508, "tokenLogit": 0.0001, "isBold": false}], [{"tok": "\u2581jan", "tokID": 10828, "tokenLogit": -0.0, "isBold": false}, {"tok": "uary", "tokID": 4852, "tokenLogit": 0.0, "isBold": false}, {"tok": "\u2581", "tokID": 29473, "tokenLogit": 0.0, "isBold": false}, {"tok": "2", "tokID": 29518, "tokenLogit": 0.0, "isBold": false}, {"tok": "2", "tokID": 29518, "tokenLogit": 0.0, "isBold": false}, {"tok": "\u2581,", "tokID": 1968, "tokenLogit": 0.0, "isBold": true, "featAct": 30.75, "bgColor": "#ffb55c"}, {"tok": "\u2581", "tokID": 29473, "tokenLogit": 0.0, "isBold": false, "posToks": ["\u2581shr", "ishment", "<'", "share", "([]"], "negToks": ["\u2581\u0441\u043f\u043e", "\u2581expert", "\u2581experts", "\u2581navigate", "limp"], "posVal": [0.3125, 0.3125, 0.3125, 0.3125, 0.3125], "negVal": [-0.3125, -0.3125, -0.3125, -0.3125, -0.3125], "lossEffect": -0.0625, "uColor": "rgb(239,239,255)"}, {"tok": "2", "tokID": 29518, "tokenLogit": 0.0, "isBold": false}, {"tok": "0", "tokID": 29502, "tokenLogit": 0.0, "isBold": false}, {"tok": "1", "tokID": 29508, "tokenLogit": 0.0001, "isBold": false}, {"tok": "3", "tokID": 29538, "tokenLogit": -0.0, "isBold": false}], [{"tok": "\u2581", "tokID": 29473, "tokenLogit": 0.0, "isBold": false}, {"tok": "2", "tokID": 29518, "tokenLogit": 0.0, "isBold": false}, {"tok": "0", "tokID": 29502, "tokenLogit": 0.0, "isBold": false}, {"tok": "1", "tokID": 29508, "tokenLogit": 0.0001, "isBold": false}, {"tok": "9", "tokID": 29542, "tokenLogit": 0.0001, "isBold": false}, {"tok": "\u2581", "tokID": 29473, "tokenLogit": 0.0, "isBold": true, "featAct": 30.25, "bgColor": "#ffb75f"}, {"tok": "2", "tokID": 29518, "tokenLogit": 0.0, "isBold": false, "posToks": ["<'", "\u2581shr", "ributes", "usion", "\u2581author"], "negToks": ["\u2581\u0441\u043f\u043e", "\u2581expert", "\u2581fog", "eltemperaturen", "FIG"], "posVal": [0.3125, 0.3125, 0.25, 0.25, 0.25], "negVal": [-0.3125, -0.3125, -0.3125, -0.3125, -0.25], "lossEffect": -0.0, "uColor": "rgb(255,255,255)"}, {"tok": "0", "tokID": 29502, "tokenLogit": 0.0, "isBold": false}, {"tok": "1", "tokID": 29508, "tokenLogit": 0.0001, "isBold": false}, {"tok": "9", "tokID": 29542, "tokenLogit": 0.0001, "isBold": false}, {"tok": "\u2581to", "tokID": 1066, "tokenLogit": 0.0, "isBold": false}], [{"tok": "\u2581cannot", "tokID": 4341, "tokenLogit": -0.0001, "isBold": false}, {"tok": "\u2581be", "tokID": 1115, "tokenLogit": 0.0001, "isBold": false}, {"tok": "\u2581reasonably", "tokID": 25356, "tokenLogit": -0.0001, "isBold": false}, {"tok": "\u2581estimated", "tokID": 12677, "tokenLogit": -0.0002, "isBold": false}, {"tok": "\u2581and", "tokID": 1072, "tokenLogit": 0.0, "isBold": false}, {"tok": "\u2581(", "tokID": 1093, "tokenLogit": -0.0, "isBold": true, "featAct": 30.0, "bgColor": "#ffb760"}, {"tok": "\u2581", "tokID": 29473, "tokenLogit": 0.0, "isBold": false, "posToks": ["\u2581shr", "\u2581Imper", "ishment", "([]", "<'"], "negToks": ["\u2581GPS", "\u2581experts", "\u2581vida", "\u2581\u0441\u043f\u043e", "\u2581expert"], "posVal": [0.375, 0.3125, 0.3125, 0.3125, 0.3125], "negVal": [-0.375, -0.375, -0.3125, -0.3125, -0.3125], "lossEffect": -0.0, "uColor": "rgb(255,255,255)"}, {"tok": "3", "tokID": 29538, "tokenLogit": -0.0, "isBold": false}, {"tok": "\u2581)", "tokID": 1911, "tokenLogit": -0.0, "isBold": false}, {"tok": "\u2581the", "tokID": 1040, "tokenLogit": -0.0, "isBold": false}, {"tok": "\u2581reasons", "tokID": 7262, "tokenLogit": 0.0, "isBold": false}], [{"tok": "\u2581mat", "tokID": 2378, "tokenLogit": 0.0001, "isBold": false}, {"tok": "ur", "tokID": 1092, "tokenLogit": 0.0001, "isBold": false, "featAct": 7.0938, "bgColor": "#ffeeda"}, {"tok": "ities", "tokID": 1986, "tokenLogit": 0.0001, "isBold": false, "featAct": 7.5, "bgColor": "#ffedd8", "posToks": ["<0x97>", "<0x93>", "<0x99>", "<0x9C>", "<0x9B>"], "negToks": ["<0x84>", "<0x80>", "<0xD0>", "\u2581b", "<0xEB>"], "posVal": [0.0625, 0.0625, 0.0625, 0.0625, 0.0625], "negVal": [-0.0625, -0.0625, -0.0625, -0.0625, -0.0625], "lossEffect": -0.0, "uColor": "rgb(255,255,255)"}, {"tok": "\u2581as", "tokID": 1158, "tokenLogit": -0.0, "isBold": false, "featAct": 22.875, "bgColor": "#ffc886", "posToks": ["<0x9B>", "<0x89>", "<0x9E>", "<0xAA>", "<0xA9>"], "negToks": ["<0xA1>", "<0x80>", "<0xC5>", "ou", "\u2581c"], "posVal": [0.0625, 0.0625, 0.0625, 0.0625, 0.0625], "negVal": [-0.0625, -0.0625, -0.0625, -0.0625, -0.0625], "lossEffect": -0.0, "uColor": "rgb(255,255,255)"}, {"tok": "\u2581of", "tokID": 1070, "tokenLogit": 0.0, "isBold": false, "posToks": ["depend", "\u2581Author", "\u2581closely", "\u2581shr", "ishment"], "negToks": ["\u2581expert", "\u2581\u043d\u043e", "\u2581\u043f\u0456\u0434", "\u2581experts", ")}\\"], "posVal": [0.1875, 0.1875, 0.1875, 0.1875, 0.1875], "negVal": [-0.1875, -0.1875, -0.1875, -0.1875, -0.1875], "lossEffect": -0.0, "uColor": "rgb(255,255,255)"}, {"tok": "\u2581december", "tokID": 22923, "tokenLogit": 0.0, "isBold": true, "featAct": 29.875, "bgColor": "#ffb861"}, {"tok": "\u2581", "tokID": 29473, "tokenLogit": 0.0, "isBold": false, "featAct": 7.9062, "bgColor": "#ffedd6", "posToks": ["depend", "usion", "ishment", "<'", "\u2581shr"], "negToks": ["eltemperaturen", "\u2581experts", "\u2581expert", "\u2581weiter", "\u2581\u0441\u043f\u043e"], "posVal": [0.25, 0.25, 0.25, 0.25, 0.25], "negVal": [-0.3125, -0.25, -0.25, -0.25, -0.25], "lossEffect": -0.0, "uColor": "rgb(255,255,255)"}, {"tok": "3", "tokID": 29538, "tokenLogit": -0.0, "isBold": false, "featAct": 14.0, "bgColor": "#ffdeb5", "posToks": ["<0x87>", "<0x83>", "<0x8B>", "<0xE0>", "<0x97>"], "negToks": ["<0xA7>", "<0x91>", "<0xC6>", "<0xD6>", "<0xD0>"], "posVal": [0.0625, 0.0625, 0.0625, 0.0625, 0.0625], "negVal": [-0.0625, -0.0625, -0.0625, -0.0625, -0.0625], "lossEffect": -0.0, "uColor": "rgb(255,255,255)"}, {"tok": "1", "tokID": 29508, "tokenLogit": 0.0001, "isBold": false, "featAct": 12.25, "bgColor": "#ffe2bf", "posToks": ["usion", "Requ", "unit", "\u2581Sud", "\u2581earth"], "negToks": ["FIG", "\u2581rout", "\u2581elem", "\u2581experts", "\u2581\u0441\u043f\u043e"], "posVal": [0.125, 0.125, 0.125, 0.125, 0.125], "negVal": [-0.125, -0.125, -0.125, -0.125, -0.125], "lossEffect": -0.0, "uColor": "rgb(255,255,255)"}, {"tok": "\u2581,", "tokID": 1968, "tokenLogit": 0.0, "isBold": false, "featAct": 20.625, "bgColor": "#ffce92", "posToks": ["\u2581might", "work", "ische", "SY", "\u2581compan"], "negToks": ["\u043b\u0441\u044f", "\u2581sie", "\u2581\u043f\u0435\u0440", "\u2581experts", "\u2581Philip"], "posVal": [0.125, 0.125, 0.125, 0.125, 0.125], "negVal": [-0.125, -0.125, -0.125, -0.125, -0.125], "lossEffect": -0.0, "uColor": "rgb(255,255,255)"}, {"tok": "\u2581", "tokID": 29473, "tokenLogit": 0.0, "isBold": false, "posToks": ["\u2581countr", "\u2581Imper", "\u2581shr", "ait", "<0xE8>"], "negToks": ["\u2581experts", "\u2581\u0441\u043f\u043e", "\u2581fog", "\u2581navigate", "\u2581tiempo"], "posVal": [0.25, 0.25, 0.25, 0.1875, 0.1875], "negVal": [-0.25, -0.25, -0.25, -0.25, -0.25], "lossEffect": -0.0, "uColor": "rgb(255,255,255)"}], [{"tok": "\u2581(", "tokID": 1093, "tokenLogit": -0.0, "isBold": false, "featAct": 7.9062, "bgColor": "#ffedd6", "posToks": ["ract", "ittle", "mon", "usion", "mark"], "negToks": ["\u2581r\u00e9", "}_{", "\u2581\u043d\u043e", "Lambda", "\u2581p\u0159"], "posVal": [0.125, 0.125, 0.125, 0.125, 0.125], "negVal": [-0.125, -0.125, -0.125, -0.125, -0.125], "lossEffect": -0.0, "uColor": "rgb(255,255,255)"}, {"tok": "\u2581continued", "tokID": 6085, "tokenLogit": 0.0, "isBold": false, "featAct": 8.3125, "bgColor": "#ffebd3", "posToks": ["[TOOL_RESULTS]", "[/AVAILABLE_TOOLS]", "<0x87>", "<0xAB>", "<0x9B>"], "negToks": ["<0x8D>", "<0x80>", "<0x95>", "<0xC5>", "<0xA6>"], "posVal": [0.0625, 0.0625, 0.0625, 0.0625, 0.0625], "negVal": [-0.0625, -0.0625, -0.0625, -0.0625, -0.0625], "lossEffect": -0.0, "uColor": "rgb(255,255,255)"}, {"tok": "\u2581)", "tokID": 1911, "tokenLogit": -0.0, "isBold": false, "posToks": ["nals", "\u2581Imper", "<0xA8>", "<0x9E>", "<0x9C>"], "negToks": ["\u2581zo", "\u2581fog", "\u2581GPS", "\u2581k\u00f6r", "<0x09>"], "posVal": [0.125, 0.125, 0.0625, 0.0625, 0.0625], "negVal": [-0.125, -0.125, -0.125, -0.125, -0.0625], "lossEffect": -0.0, "uColor": "rgb(255,255,255)"}, {"tok": "\u2581as", "tokID": 1158, "tokenLogit": -0.0, "isBold": false, "featAct": 23.625, "bgColor": "#ffc782"}, {"tok": "\u2581of", "tokID": 1070, "tokenLogit": 0.0, "isBold": false, "posToks": ["ocument", "ittle", "Helper", "\u2581earth", "romise"], "negToks": ["Phi", "\u2581\u043f\u0435\u0440", "Func", "\u2581\u0441\u043f\u043e", "\u2581\u043f\u0456\u0434"], "posVal": [0.1875, 0.1875, 0.1875, 0.1875, 0.1875], "negVal": [-0.1875, -0.1875, -0.1875, -0.1875, -0.1875], "lossEffect": -0.0625, "uColor": "rgb(239,239,255)"}, {"tok": "\u2581september", "tokID": 26262, "tokenLogit": 0.0001, "isBold": true, "featAct": 29.875, "bgColor": "#ffb861"}, {"tok": "\u2581", "tokID": 29473, "tokenLogit": 0.0, "isBold": false, "posToks": ["<'", "\u2581shr", "([]", "lif", "\u2581giornata"], "negToks": ["\u2581experts", "\u2581expert", "eltemperaturen", "\u2581GPS", "(\\"], "posVal": [0.25, 0.25, 0.25, 0.25, 0.25], "negVal": [-0.25, -0.25, -0.25, -0.25, -0.1875], "lossEffect": -0.0, "uColor": "rgb(255,255,255)"}, {"tok": "3", "tokID": 29538, "tokenLogit": -0.0, "isBold": false, "featAct": 12.0625, "bgColor": "#ffe2bf"}, {"tok": "0", "tokID": 29502, "tokenLogit": 0.0, "isBold": false, "featAct": 11.5625, "bgColor": "#ffe3c2", "posToks": ["mark", "ats", "\u2581Kr", "iture", "Compat"], "negToks": ["\u2581r\u00e9", "\u2581others", "\u2581bod", "\u2581kne", "\u2581\u043f\u0435\u0440"], "posVal": [0.125, 0.125, 0.125, 0.125, 0.125], "negVal": [-0.125, -0.125, -0.125, -0.125, -0.125], "lossEffect": -0.0, "uColor": "rgb(255,255,255)"}, {"tok": "\u2581,", "tokID": 1968, "tokenLogit": 0.0, "isBold": false, "featAct": 17.375, "bgColor": "#ffd6a3", "posToks": ["idth", "ats", "ische", "ributes", "ocol"], "negToks": ["\u2581\u043f\u0435\u0440", "\u2581auf", "\u2581kne", "\u2581\u0441\u043f\u043e", "\u2581songs"], "posVal": [0.125, 0.125, 0.125, 0.125, 0.125], "negVal": [-0.125, -0.125, -0.125, -0.125, -0.125], "lossEffect": -0.0, "uColor": "rgb(255,255,255)"}, {"tok": "\u2581", "tokID": 29473, "tokenLogit": 0.0, "isBold": false, "posToks": ["suite", "\u2581shr", "([]", "nals", "share"], "negToks": ["\u2581\u0441\u043f\u043e", "\u2581expert", "\u2581experts", "\u2581fog", "\u2581weiter"], "posVal": [0.1875, 0.1875, 0.1875, 0.1875, 0.1875], "negVal": [-0.1875, -0.1875, -0.1875, -0.1875, -0.1875], "lossEffect": -0.0, "uColor": "rgb(255,255,255)"}], [{"tok": "\u2581in", "tokID": 1065, "tokenLogit": -0.0, "isBold": false}, {"tok": "\u2581millions", "tokID": 11844, "tokenLogit": -0.0, "isBold": false}, {"tok": "|", "tokID": 29534, "tokenLogit": 0.0, "isBold": false}, {"tok": "as", "tokID": 1061, "tokenLogit": -0.0, "isBold": false, "featAct": 17.5, "bgColor": "#ffd6a3"}, {"tok": "\u2581of", "tokID": 1070, "tokenLogit": 0.0, "isBold": false, "posToks": ["<'", "ife", "<0xB4>", "ittle", "ish"], "negToks": ["\u2581GPS", "param", "\u2581new", "(\\", "alue"], "posVal": [0.1875, 0.125, 0.125, 0.125, 0.125], "negVal": [-0.1875, -0.125, -0.125, -0.125, -0.125], "lossEffect": -0.0, "uColor": "rgb(255,255,255)"}, {"tok": "\u2581december", "tokID": 22923, "tokenLogit": 0.0, "isBold": true, "featAct": 29.875, "bgColor": "#ffb861"}, {"tok": "\u2581", "tokID": 29473, "tokenLogit": 0.0, "isBold": false, "posToks": ["<'", "\u2581shr", "usion", "\u2581Dans", "ishment"], "negToks": ["eltemperaturen", "\u2581\u0441\u043f\u043e", "\u2581expert", "\u2581experts", "\u2581kne"], "posVal": [0.3125, 0.25, 0.25, 0.25, 0.25], "negVal": [-0.3125, -0.25, -0.25, -0.25, -0.25], "lossEffect": -0.0, "uColor": "rgb(255,255,255)"}, {"tok": "2", "tokID": 29518, "tokenLogit": 0.0, "isBold": false, "featAct": 7.7812, "bgColor": "#ffedd6"}, {"tok": "0", "tokID": 29502, "tokenLogit": 0.0, "isBold": false, "featAct": 7.75, "bgColor": "#ffedd6", "posToks": ["<0x93>", "<0x87>", "<0x94>", "<0x9E>", "<0x9B>"], "negToks": ["<0xA7>", "<0x85>", "<0xB3>", "<0xD9>", "<0xD1>"], "posVal": [0.0625, 0.0625, 0.0625, 0.0625, 0.0625], "negVal": [-0.0625, -0.0625, -0.0625, -0.0625, -0.0625], "lossEffect": -0.0, "uColor": "rgb(255,255,255)"}, {"tok": "1", "tokID": 29508, "tokenLogit": 0.0001, "isBold": false, "posToks": ["<0x97>", "<0x87>", "<0x9D>", "<0x9F>", "<0x9E>"], "negToks": ["eltemperaturen", "<0xC5>", "<0x09>", "<0xD1>", "<0x9A>"], "posVal": [0.0625, 0.0625, 0.0625, 0.0625, 0.0625], "negVal": [-0.125, -0.0625, -0.0625, -0.0625, -0.0625], "lossEffect": -0.0, "uColor": "rgb(255,255,255)"}, {"tok": "3", "tokID": 29538, "tokenLogit": -0.0, "isBold": false, "featAct": 10.0, "bgColor": "#ffe7ca"}], [{"tok": "\u2581ended", "tokID": 7822, "tokenLogit": -0.0, "isBold": false, "posToks": ["ishment", "usion", "\u2581shr", "([]", "<'"], "negToks": ["iane", "\u2581fog", "\u2581Mar\u00eda", "\u2581Nintendo", "eltemperaturen"], "posVal": [0.125, 0.125, 0.125, 0.125, 0.125], "negVal": [-0.125, -0.125, -0.125, -0.125, -0.125], "lossEffect": -0.0, "uColor": "rgb(255,255,255)"}, {"tok": "\u2581december", "tokID": 22923, "tokenLogit": 0.0, "isBold": false, "featAct": 19.125, "bgColor": "#ffd19a"}, {"tok": "\u2581", "tokID": 29473, "tokenLogit": 0.0, "isBold": false, "posToks": ["\u2581\u2020", "ocument", "ishment", "<'", "\u2581shr"], "negToks": ["\u2581\u0441\u043f\u043e", "\u2581expert", "\u2581experts", "\u2581vida", "\u2581wrapped"], "posVal": [0.1875, 0.1875, 0.1875, 0.1875, 0.1875], "negVal": [-0.1875, -0.1875, -0.1875, -0.1875, -0.1875], "lossEffect": -0.0625, "uColor": "rgb(239,239,255)"}, {"tok": "3", "tokID": 29538, "tokenLogit": -0.0, "isBold": false, "featAct": 10.6875, "bgColor": "#ffe6c7"}, {"tok": "1", "tokID": 29508, "tokenLogit": 0.0001, "isBold": false, "posToks": ["\u2581author", "ocument", "unit", "checked", "\u2581closely"], "negToks": ["FIG", "}_{", "\u2581expert", "\u2581elem", "\u2581Color"], "posVal": [0.125, 0.125, 0.125, 0.125, 0.125], "negVal": [-0.125, -0.125, -0.125, -0.125, -0.125], "lossEffect": -0.0625, "uColor": "rgb(239,239,255)"}, {"tok": "\u2581,", "tokID": 1968, "tokenLogit": 0.0, "isBold": true, "featAct": 29.75, "bgColor": "#ffb862"}, {"tok": "\u2581", "tokID": 29473, "tokenLogit": 0.0, "isBold": false, "posToks": ["\u2581shr", "\u2581Imper", "ishment", "([]", "<'"], "negToks": ["\u2581\u043f\u0435\u0440", "\u2581expert", "\u2581\u043f\u0456\u0434", "\u2581experts", "\u2581\u0441\u043f\u043e"], "posVal": [0.3125, 0.25, 0.25, 0.25, 0.25], "negVal": [-0.25, -0.25, -0.25, -0.25, -0.25], "lossEffect": -0.0625, "uColor": "rgb(239,239,255)"}, {"tok": "2", "tokID": 29518, "tokenLogit": 0.0, "isBold": false}, {"tok": "0", "tokID": 29502, "tokenLogit": 0.0, "isBold": false}, {"tok": "1", "tokID": 29508, "tokenLogit": 0.0001, "isBold": false}, {"tok": "6", "tokID": 29552, "tokenLogit": 0.0001, "isBold": false}], [{"tok": "\u2581is", "tokID": 1117, "tokenLogit": -0.0, "isBold": false, "featAct": 7.6875, "bgColor": "#ffedd7", "posToks": ["depend", "unit", "ishment", "<'", "\u2581shr"], "negToks": ["\u2581wrapped", "\u2581experts", "\u2581vida", "\u2581fog", "\u2581Duke"], "posVal": [0.125, 0.125, 0.125, 0.125, 0.125], "negVal": [-0.125, -0.125, -0.125, -0.125, -0.125], "lossEffect": -0.0, "uColor": "rgb(255,255,255)"}, {"tok": "\u2581as", "tokID": 1158, "tokenLogit": -0.0, "isBold": false, "featAct": 6.6562, "bgColor": "#ffefdc", "posToks": ["<0x9E>", "<0x99>", "<0xA2>", "<0xAA>", "<0xA8>"], "negToks": ["<0x90>", "<0x81>", "<0xA0>", "<0xA6>", "<0xA1>"], "posVal": [0.0625, 0.0625, 0.0625, 0.0625, 0.0625], "negVal": [-0.0625, -0.0625, -0.0625, -0.0625, -0.0625], "lossEffect": -0.0, "uColor": "rgb(255,255,255)"}, {"tok": "\u2581follows", "tokID": 6872, "tokenLogit": 0.0002, "isBold": false, "featAct": 5.0625, "bgColor": "#fff3e5", "posToks": ["<0x8F>", "<0x8B>", "<0x99>", "<0xAA>", "<0x9B>"], "negToks": ["<0xA7>", "<0xA6>", "<0xC6>", "<0xD3>", "<0xD1>"], "posVal": [0.0625, 0.0625, 0.0625, 0.0625, 0.0625], "negVal": [-0.0625, -0.0625, -0.0625, -0.0625, -0.0625], "lossEffect": -0.0625, "uColor": "rgb(239,239,255)"}, {"tok": "\u2581as", "tokID": 1158, "tokenLogit": -0.0, "isBold": false, "featAct": 28.25, "bgColor": "#ffbc6a", "posToks": ["<0x97>", "<0x8F>", "<0x9B>", "<0x9E>", "<0x9C>"], "negToks": ["<0xDA>", "<0x09>", "<0xDD>", "\u2581=", "\u2581l"], "posVal": [0.0625, 0.0625, 0.0625, 0.0625, 0.0625], "negVal": [-0.0625, -0.0625, -0.0625, -0.0625, -0.0625], "lossEffect": -0.0, "uColor": "rgb(255,255,255)"}, {"tok": "\u2581of", "tokID": 1070, "tokenLogit": 0.0, "isBold": false, "featAct": 6.375, "bgColor": "#fff0de", "posToks": ["ishment", "etr", "\u2581shr", "([]", "<'"], "negToks": ["\u2581vida", "\u2581\u0441\u043f\u043e", "\u2581fog", "eltemperaturen", "\u2581dude"], "posVal": [0.25, 0.25, 0.25, 0.25, 0.25], "negVal": [-0.25, -0.25, -0.25, -0.25, -0.25], "lossEffect": -0.0, "uColor": "rgb(255,255,255)"}, {"tok": "\u2581december", "tokID": 22923, "tokenLogit": 0.0, "isBold": true, "featAct": 29.5, "bgColor": "#ffb963", "posToks": ["<0x88>", "<0x87>", "<0x8B>", "<0xA9>", "<0x9B>"], "negToks": ["<0xDD>", "<0xB0>", "\u2581o", "\u2581W", "\u2581="], "posVal": [0.0625, 0.0625, 0.0625, 0.0625, 0.0625], "negVal": [-0.0625, -0.0625, -0.0625, -0.0625, -0.0625], "lossEffect": -0.0, "uColor": "rgb(255,255,255)"}, {"tok": "\u2581", "tokID": 29473, "tokenLogit": 0.0, "isBold": false, "featAct": 5.5312, "bgColor": "#fff2e2", "posToks": ["ishment", "ocument", "\u2581shr", "\u2581countr", "<'"], "negToks": ["\u2581experts", "\u2581\u0441\u043f\u043e", "\u2581weiter", "iane", "\u2581dude"], "posVal": [0.25, 0.25, 0.25, 0.25, 0.25], "negVal": [-0.25, -0.25, -0.25, -0.25, -0.25], "lossEffect": -0.0, "uColor": "rgb(255,255,255)"}, {"tok": "3", "tokID": 29538, "tokenLogit": -0.0, "isBold": false, "featAct": 17.0, "bgColor": "#ffd6a5", "posToks": ["<0x9F>", "<0x9D>", "<0xA8>", "<0xAC>", "<0xAA>"], "negToks": ["<0x81>", "<0x80>", "<0xC5>", "\u2581w", "<0xD0>"], "posVal": [0.0625, 0.0625, 0.0625, 0.0625, 0.0625], "negVal": [-0.0625, -0.0625, -0.0625, -0.0625, -0.0625], "lossEffect": -0.0, "uColor": "rgb(255,255,255)"}, {"tok": "1", "tokID": 29508, "tokenLogit": 0.0001, "isBold": false, "featAct": 12.75, "bgColor": "#ffe1bc", "posToks": ["ittle", "ats", "\u0434\u0435", "\u2581author", "ocument"], "negToks": ["}_{", "\u2581user", "\u2581search", "\u2581lat", "\u2581couldn"], "posVal": [0.125, 0.125, 0.125, 0.125, 0.125], "negVal": [-0.125, -0.125, -0.125, -0.125, -0.125], "lossEffect": -0.0, "uColor": "rgb(255,255,255)"}, {"tok": "\u2581(", "tokID": 1093, "tokenLogit": -0.0, "isBold": false, "featAct": 8.8125, "bgColor": "#ffead1", "posToks": ["requ", "idth", "ract", "irm", "ocument"], "negToks": ["\u2581r\u00e9", "\u2581film", "gamma", "\u2581broken", "\u2581sie"], "posVal": [0.125, 0.125, 0.125, 0.125, 0.125], "negVal": [-0.125, -0.125, -0.125, -0.125, -0.125], "lossEffect": -0.0, "uColor": "rgb(255,255,255)"}, {"tok": "\u2581in", "tokID": 1065, "tokenLogit": -0.0, "isBold": false, "featAct": 5.125, "bgColor": "#fff3e4", "posToks": ["<'", "\u2581closely", "<0x87>", "<0x86>", "<0x82>"], "negToks": ["\u2581tiempo", "\u2581experts", "\u2581invariant", "limp", "<0x0A>"], "posVal": [0.125, 0.125, 0.0625, 0.0625, 0.0625], "negVal": [-0.125, -0.125, -0.125, -0.125, -0.0625], "lossEffect": -0.0, "uColor": "rgb(255,255,255)"}]], "idSuffix": "0", "title": "TOP ACTIVATIONS<br>MAX = 48.250"}, "seq-group-1-1": {"data": [[{"tok": "\u2581of", "tokID": 1070, "tokenLogit": 0.0, "isBold": false, "posToks": ["share", "([]", "ishment", "pon", "',"], "negToks": ["eltemperaturen", "\u2581\u0441\u043f\u043e", "\u2581expert", "(\\", "param"], "posVal": [0.1875, 0.1875, 0.1875, 0.125, 0.125], "negVal": [-0.1875, -0.1875, -0.1875, -0.125, -0.125], "lossEffect": -0.0, "uColor": "rgb(255,255,255)"}, {"tok": "\u2581oct", "tokID": 10309, "tokenLogit": 0.0001, "isBold": false}, {"tok": "ober", "tokID": 3278, "tokenLogit": 0.0001, "isBold": false, "featAct": 20.375, "bgColor": "#ffce93"}, {"tok": "\u2581", "tokID": 29473, "tokenLogit": 0.0, "isBold": false, "featAct": 10.3125, "bgColor": "#ffe7c9", "posToks": ["ocument", "ract", "\u2581Kr", "ishment", "\u2581Such"], "negToks": ["\u2581expert", "\u2581r\u00e9", "\u2581Philip", "\u2581\u0441\u043f\u043e", "\u2581films"], "posVal": [0.1875, 0.1875, 0.1875, 0.1875, 0.1875], "negVal": [-0.1875, -0.1875, -0.1875, -0.1875, -0.1875], "lossEffect": -0.0, "uColor": "rgb(255,255,255)"}, {"tok": "1", "tokID": 29508, "tokenLogit": 0.0001, "isBold": false, "posToks": ["<0x87>", "<0x86>", "<0x97>", "<0x9F>", "<0x9E>"], "negToks": ["<0xB3>", "<0xA0>", "<0xD5>", "or", "\u2581t"], "posVal": [0.0625, 0.0625, 0.0625, 0.0625, 0.0625], "negVal": [-0.0625, -0.0625, -0.0625, -0.0625, -0.0625], "lossEffect": -0.0625, "uColor": "rgb(239,239,255)"}, {"tok": "\u2581,", "tokID": 1968, "tokenLogit": 0.0, "isBold": true, "featAct": 48.25, "bgColor": "#ff8c00"}, {"tok": "\u2581", "tokID": 29473, "tokenLogit": 0.0, "isBold": false, "posToks": ["<'", "\u2581shr", "ishment", "depend", "usion"], "negToks": ["eltemperaturen", "\u2581\u0441\u043f\u043e", "\u2581fog", "\u2581experts", "\u2581expert"], "posVal": [0.5, 0.5, 0.5, 0.4375, 0.4375], "negVal": [-0.5, -0.5, -0.4375, -0.4375, -0.4375], "lossEffect": -0.0, "uColor": "rgb(255,255,255)"}, {"tok": "2", "tokID": 29518, "tokenLogit": 0.0, "isBold": false}, {"tok": "0", "tokID": 29502, "tokenLogit": 0.0, "isBold": false}, {"tok": "0", "tokID": 29502, "tokenLogit": 0.0, "isBold": false}, {"tok": "1", "tokID": 29508, "tokenLogit": 0.0001, "isBold": false}]], "idSuffix": "0", "title": "INTERVAL 43.425 - 48.250<br>CONTAINS 0.000%"}, "seq-group-1-3": {"data": [[{"tok": "\u2581of", "tokID": 1070, "tokenLogit": 0.0, "isBold": false, "posToks": ["iddle", "ocument", "usion", "\u2581Such", "\"><"], "negToks": ["\u2581}}", "\u2581finger", "]))", "\u2581beim", "\u2581fog"], "posVal": [0.125, 0.125, 0.125, 0.125, 0.125], "negVal": [-0.125, -0.125, -0.125, -0.125, -0.125], "lossEffect": -0.0, "uColor": "rgb(255,255,255)"}, {"tok": "\u2581december", "tokID": 22923, "tokenLogit": 0.0, "isBold": false, "featAct": 21.625, "bgColor": "#ffcc8d"}, {"tok": "\u2581", "tokID": 29473, "tokenLogit": 0.0, "isBold": false, "featAct": 6.9688, "bgColor": "#ffefdb", "posToks": ["\u2581might", "ittle", "ributes", "\u2581occup", "unit"], "negToks": ["\u2581kne", "\u2581expert", "\u2581\u043f\u0456\u0434", "isi\u00f3n", "\u2581experts"], "posVal": [0.1875, 0.1875, 0.1875, 0.1875, 0.1875], "negVal": [-0.1875, -0.1875, -0.1875, -0.1875, -0.1875], "lossEffect": -0.0, "uColor": "rgb(255,255,255)"}, {"tok": "3", "tokID": 29538, "tokenLogit": -0.0, "isBold": false, "featAct": 9.1875, "bgColor": "#ffe9cf", "posToks": ["<0x97>", "<0x93>", "<0x99>", "<0x9E>", "<0x9B>"], "negToks": ["<0xC5>", "<0x09>", "<0xC6>", "\u2581\"", "\u2581c"], "posVal": [0.0625, 0.0625, 0.0625, 0.0625, 0.0625], "negVal": [-0.0625, -0.0625, -0.0625, -0.0625, -0.0625], "lossEffect": -0.0, "uColor": "rgb(255,255,255)"}, {"tok": "1", "tokID": 29508, "tokenLogit": 0.0001, "isBold": false, "featAct": 8.3125, "bgColor": "#ffebd3", "posToks": ["\u2581shr", "<0x8F>", "<0x87>", "<0xA8>", "<0x89>"], "negToks": ["\u2581GPS", "\u2581fog", "\u2581\u0441\u043f\u043e", "<0x81>", "<0x00>"], "posVal": [0.125, 0.0625, 0.0625, 0.0625, 0.0625], "negVal": [-0.125, -0.125, -0.125, -0.0625, -0.0625], "lossEffect": -0.0, "uColor": "rgb(255,255,255)"}, {"tok": "\u2581,", "tokID": 1968, "tokenLogit": 0.0, "isBold": true, "featAct": 36.25, "bgColor": "#ffa83f", "posToks": ["<0x89>", "<0x87>", "<0x97>", "<0x9B>", "<0x99>"], "negToks": ["\u2581fog", "<0x80>", "<0x09>", "<0x81>", "<0x0A>"], "posVal": [0.0625, 0.0625, 0.0625, 0.0625, 0.0625], "negVal": [-0.125, -0.0625, -0.0625, -0.0625, -0.0625], "lossEffect": -0.0, "uColor": "rgb(255,255,255)"}, {"tok": "\u2581", "tokID": 29473, "tokenLogit": 0.0, "isBold": false, "posToks": ["\u2581shr", "ishment", "<'", "\u2581countr", "ocument"], "negToks": ["\u2581experts", "\u2581expert", "\u2581fog", "eltemperaturen", "\u2581kne"], "posVal": [0.375, 0.375, 0.375, 0.375, 0.3125], "negVal": [-0.375, -0.375, -0.375, -0.375, -0.3125], "lossEffect": -0.0, "uColor": "rgb(255,255,255)"}, {"tok": "2", "tokID": 29518, "tokenLogit": 0.0, "isBold": false, "featAct": 7.5938, "bgColor": "#ffedd7"}, {"tok": "0", "tokID": 29502, "tokenLogit": 0.0, "isBold": false, "posToks": ["<0x8F>", "<0x87>", "<0x9E>", "<0xA9>", "<0x9F>"], "negToks": ["<0xA1>", "<0x80>", "<0xCF>", "\u2581t", "<0xD0>"], "posVal": [0.0625, 0.0625, 0.0625, 0.0625, 0.0625], "negVal": [-0.0625, -0.0625, -0.0625, -0.0625, -0.0625], "lossEffect": -0.0, "uColor": "rgb(255,255,255)"}, {"tok": "0", "tokID": 29502, "tokenLogit": 0.0, "isBold": false}, {"tok": "8", "tokID": 29551, "tokenLogit": 0.0001, "isBold": false}], [{"tok": "\u2581consisted", "tokID": 25479, "tokenLogit": 0.0, "isBold": false, "featAct": 13.0, "bgColor": "#ffe0bb", "posToks": ["ocument", "ittle", "usion", "\u2581Stud", "ributes"], "negToks": ["}_{", "(\\", "gamma", "\u2581race", "\u2581\u0432\u044b"], "posVal": [0.125, 0.125, 0.125, 0.125, 0.125], "negVal": [-0.125, -0.125, -0.125, -0.125, -0.125], "lossEffect": -0.0, "uColor": "rgb(255,255,255)"}, {"tok": "\u2581of", "tokID": 1070, "tokenLogit": 0.0, "isBold": false, "featAct": 11.0, "bgColor": "#ffe5c5", "posToks": ["\u2581Software", "\u0434\u0435", "\u2581Lie", "\u2581closely", "depend"], "negToks": ["FIG", "\u2581\u043d\u043e", "\u2581invent", "isi\u00f3n", "\u2581vic"], "posVal": [0.125, 0.125, 0.125, 0.125, 0.125], "negVal": [-0.125, -0.125, -0.125, -0.125, -0.125], "lossEffect": -0.0, "uColor": "rgb(255,255,255)"}, {"tok": "\u2581the", "tokID": 1040, "tokenLogit": -0.0, "isBold": false, "featAct": 9.0, "bgColor": "#ffead0", "posToks": [";/", "<'", "\u2581shr", "<0x87>", "[/INST]"], "negToks": ["\u2581Nintendo", "iane", "<0x95>", "<0x8D>", "<0x09>"], "posVal": [0.125, 0.125, 0.125, 0.0625, 0.0625], "negVal": [-0.125, -0.125, -0.0625, -0.0625, -0.0625], "lossEffect": -0.0, "uColor": "rgb(255,255,255)"}, {"tok": "\u2581following", "tokID": 3064, "tokenLogit": 0.0, "isBold": false, "featAct": 20.625, "bgColor": "#ffce92", "posToks": ["<0x97>", "<0x87>", "<0x99>", "<0x9B>", "<0x9A>"], "negToks": ["\u2581Duke", "<0xC5>", "<0x84>", "<0xC6>", "<0xB3>"], "posVal": [0.0625, 0.0625, 0.0625, 0.0625, 0.0625], "negVal": [-0.125, -0.0625, -0.0625, -0.0625, -0.0625], "lossEffect": -0.0, "uColor": "rgb(255,255,255)"}, {"tok": "\u2581at", "tokID": 1206, "tokenLogit": 0.0, "isBold": false, "featAct": 8.75, "bgColor": "#ffead1", "posToks": ["\u2581shr", "depend", "<'", "LAB", "share"], "negToks": ["\u2581kne", "\u2581expert", "\u2581\u0441\u043f\u043e", "\u2581fog", "\u2581experts"], "posVal": [0.1875, 0.1875, 0.1875, 0.1875, 0.1875], "negVal": [-0.1875, -0.1875, -0.1875, -0.1875, -0.1875], "lossEffect": -0.0, "uColor": "rgb(255,255,255)"}, {"tok": "\u2581december", "tokID": 22923, "tokenLogit": 0.0, "isBold": true, "featAct": 35.75, "bgColor": "#ffaa42", "posToks": ["<0x99>", "<0x87>", "<0x9E>", "<0xB6>", "<0xA9>"], "negToks": ["<0xC5>", "<0xA1>", "<0xD0>", "<0xE2>", "<0xD1>"], "posVal": [0.0625, 0.0625, 0.0625, 0.0625, 0.0625], "negVal": [-0.0625, -0.0625, -0.0625, -0.0625, -0.0625], "lossEffect": -0.0, "uColor": "rgb(255,255,255)"}, {"tok": "\u2581", "tokID": 29473, "tokenLogit": 0.0, "isBold": false, "featAct": 8.875, "bgColor": "#ffead0", "posToks": ["\u2581shr", "usion", "<'", "\u2581countr", "<0xE8>"], "negToks": ["\u2581fog", "\u2581\u043d\u043e", "}_{", "FIG", "\u2581\u0432\u044b"], "posVal": [0.3125, 0.3125, 0.3125, 0.3125, 0.25], "negVal": [-0.3125, -0.25, -0.25, -0.25, -0.25], "lossEffect": -0.0, "uColor": "rgb(255,255,255)"}, {"tok": "3", "tokID": 29538, "tokenLogit": -0.0, "isBold": false, "featAct": 13.875, "bgColor": "#ffdeb6", "posToks": ["<0x9F>", "<0x97>", "<0xA9>", "<0xAB>", "<0xAA>"], "negToks": ["<0xCD>", "<0x80>", "<0xD1>", "\u2581p", "<0xE2>"], "posVal": [0.0625, 0.0625, 0.0625, 0.0625, 0.0625], "negVal": [-0.0625, -0.0625, -0.0625, -0.0625, -0.0625], "lossEffect": -0.0625, "uColor": "rgb(239,239,255)"}, {"tok": "1", "tokID": 29508, "tokenLogit": 0.0001, "isBold": false, "featAct": 7.6875, "bgColor": "#ffedd7", "posToks": ["\u2581earth", "pon", "ieder", "\u2581\u2212", "Compat"], "negToks": ["\u2581\u043d\u043e", "(\\", "Phi", "\u2581\u0441\u043f\u043e", "\u2581\u043f\u0456\u0434"], "posVal": [0.125, 0.125, 0.125, 0.125, 0.125], "negVal": [-0.125, -0.125, -0.125, -0.125, -0.125], "lossEffect": -0.0, "uColor": "rgb(255,255,255)"}, {"tok": ":", "tokID": 29515, "tokenLogit": -0.0, "isBold": false, "posToks": ["<0x8A>", "<0x88>", "<0x99>", "<0xA5>", "<0x9B>"], "negToks": ["<0x95>", "<0x0A>", "<0xA1>", "<0xC5>", "<0xB0>"], "posVal": [0.0625, 0.0625, 0.0625, 0.0625, 0.0625], "negVal": [-0.0625, -0.0625, -0.0625, -0.0625, -0.0625], "lossEffect": 0.0625, "uColor": "rgb(255,239,239)"}, {"tok": "\u2581.", "tokID": 1610, "tokenLogit": 0.0, "isBold": false, "featAct": 9.5625, "bgColor": "#ffe8cd"}], [{"tok": "\u2581future", "tokID": 4205, "tokenLogit": 0.0001, "isBold": false}, {"tok": "\u2581grant", "tokID": 13922, "tokenLogit": -0.0, "isBold": false}, {"tok": "\u2581as", "tokID": 1158, "tokenLogit": -0.0, "isBold": false, "featAct": 10.9375, "bgColor": "#ffe5c5"}, {"tok": "\u2581of", "tokID": 1070, "tokenLogit": 0.0, "isBold": false, "featAct": 6.9375, "bgColor": "#ffefdb", "posToks": ["ishment", "uding", "\u2581shr", "lab", "([]"], "negToks": ["\u2581\u043f\u0435\u0440", "\u2581auf", "\u2581experts", "\u2581Duke", "\u2581vida"], "posVal": [0.125, 0.125, 0.125, 0.125, 0.125], "negVal": [-0.125, -0.125, -0.125, -0.125, -0.125], "lossEffect": -0.0, "uColor": "rgb(255,255,255)"}, {"tok": "\u2581may", "tokID": 1761, "tokenLogit": 0.0001, "isBold": false, "featAct": 14.8125, "bgColor": "#ffdcb1", "posToks": ["<0x8E>", "<0x8D>", "<0x97>", "<0x9D>", "<0x9B>"], "negToks": ["<0x91>", "<0x80>", "<0x98>", "im", "<0xA7>"], "posVal": [0.0625, 0.0625, 0.0625, 0.0625, 0.0625], "negVal": [-0.0625, -0.0625, -0.0625, -0.0625, -0.0625], "lossEffect": -0.0625, "uColor": "rgb(239,239,255)"}, {"tok": "\u2581", "tokID": 29473, "tokenLogit": 0.0, "isBold": true, "featAct": 35.0, "bgColor": "#ffac46", "posToks": ["ish", "<0xAA>", "\u2581follow", "ird", "ract"], "negToks": ["\u2581currently", "\u2581Paul", "FIG", "\u2581\u043f\u0435\u0440", "\u2581expert"], "posVal": [0.125, 0.125, 0.125, 0.125, 0.125], "negVal": [-0.125, -0.125, -0.125, -0.125, -0.125], "lossEffect": -0.0, "uColor": "rgb(255,255,255)"}, {"tok": "3", "tokID": 29538, "tokenLogit": -0.0, "isBold": false, "featAct": 10.1875, "bgColor": "#ffe7c9", "posToks": ["depend", "usion", "<'", "LAB", "\u2581Dans"], "negToks": ["\u2581Duke", "\u2581\u0441\u043f\u043e", "\u2581dude", "\u2581navigate", "\u2581zo"], "posVal": [0.25, 0.25, 0.25, 0.25, 0.25], "negVal": [-0.25, -0.25, -0.25, -0.25, -0.25], "lossEffect": -0.0, "uColor": "rgb(255,255,255)"}, {"tok": "1", "tokID": 29508, "tokenLogit": 0.0001, "isBold": false, "featAct": 7.9688, "bgColor": "#ffecd5", "posToks": ["ishment", "\u2581sont", "<'", "flu", "\u2581Imper"], "negToks": ["\u2581expert", "\u2581\u0432\u044b", "\u2581films", "\u2581experts", "\u2581elem"], "posVal": [0.125, 0.125, 0.125, 0.125, 0.125], "negVal": [-0.125, -0.125, -0.125, -0.125, -0.125], "lossEffect": -0.0, "uColor": "rgb(255,255,255)"}, {"tok": "\u2581,", "tokID": 1968, "tokenLogit": 0.0, "isBold": false, "posToks": ["Great", "ishment", "[control_8]", "[/AVAILABLE_TOOLS]", "<unk>"], "negToks": ["<0xB0>", "<0xA7>", "<0xB3>", "<0xC8>", "<0xC6>"], "posVal": [0.125, 0.125, 0.0625, 0.0625, 0.0625], "negVal": [-0.0625, -0.0625, -0.0625, -0.0625, -0.0625], "lossEffect": -0.0625, "uColor": "rgb(239,239,255)"}, {"tok": "\u2581", "tokID": 29473, "tokenLogit": 0.0, "isBold": false}, {"tok": "2", "tokID": 29518, "tokenLogit": 0.0, "isBold": false, "featAct": 6.375, "bgColor": "#fff0de"}], [{"tok": "\u2581effective", "tokID": 6413, "tokenLogit": -0.0001, "isBold": false, "posToks": ["<0x9D>", "<0x87>", "<0xA5>", "<0xCB>", "<0xB7>"], "negToks": ["<0x80>", "<0x09>", "<0x83>", "<0xA1>", "<0x8D>"], "posVal": [0.0625, 0.0625, 0.0625, 0.0625, 0.0625], "negVal": [-0.0625, -0.0625, -0.0625, -0.0625, -0.0625], "lossEffect": -0.0, "uColor": "rgb(255,255,255)"}, {"tok": "\u2581j", "tokID": 1229, "tokenLogit": -0.0001, "isBold": false}, {"tok": "une", "tokID": 2570, "tokenLogit": -0.0, "isBold": false}, {"tok": "\u2581", "tokID": 29473, "tokenLogit": 0.0, "isBold": false}, {"tok": "1", "tokID": 29508, "tokenLogit": 0.0001, "isBold": false}, {"tok": "\u2581,", "tokID": 1968, "tokenLogit": 0.0, "isBold": true, "featAct": 37.0, "bgColor": "#ffa73b"}, {"tok": "\u2581", "tokID": 29473, "tokenLogit": 0.0, "isBold": false, "posToks": ["\u2581shr", "<'", "usion", "\u2581assets", "ishment"], "negToks": ["\u2581experts", "\u2581expert", "\u2581fog", "eltemperaturen", "\u2581\u0441\u043f\u043e"], "posVal": [0.375, 0.3125, 0.3125, 0.3125, 0.3125], "negVal": [-0.375, -0.375, -0.375, -0.375, -0.3125], "lossEffect": -0.0, "uColor": "rgb(255,255,255)"}, {"tok": "2", "tokID": 29518, "tokenLogit": 0.0, "isBold": false}, {"tok": "0", "tokID": 29502, "tokenLogit": 0.0, "isBold": false}, {"tok": "1", "tokID": 29508, "tokenLogit": 0.0001, "isBold": false}, {"tok": "3", "tokID": 29538, "tokenLogit": -0.0, "isBold": false}]], "idSuffix": "0", "title": "INTERVAL 33.775 - 38.600<br>CONTAINS 0.001%"}, "seq-group-1-4": {"data": [[{"tok": "\u2581ended", "tokID": 7822, "tokenLogit": -0.0, "isBold": false, "posToks": ["ishment", "usion", "\u2581shr", "([]", "<'"], "negToks": ["iane", "\u2581fog", "\u2581Mar\u00eda", "\u2581Nintendo", "eltemperaturen"], "posVal": [0.125, 0.125, 0.125, 0.125, 0.125], "negVal": [-0.125, -0.125, -0.125, -0.125, -0.125], "lossEffect": -0.0, "uColor": "rgb(255,255,255)"}, {"tok": "\u2581december", "tokID": 22923, "tokenLogit": 0.0, "isBold": false, "featAct": 19.125, "bgColor": "#ffd19a"}, {"tok": "\u2581", "tokID": 29473, "tokenLogit": 0.0, "isBold": false, "posToks": ["\u2581\u2020", "ocument", "ishment", "<'", "\u2581shr"], "negToks": ["\u2581\u0441\u043f\u043e", "\u2581expert", "\u2581experts", "\u2581vida", "\u2581wrapped"], "posVal": [0.1875, 0.1875, 0.1875, 0.1875, 0.1875], "negVal": [-0.1875, -0.1875, -0.1875, -0.1875, -0.1875], "lossEffect": -0.0625, "uColor": "rgb(239,239,255)"}, {"tok": "3", "tokID": 29538, "tokenLogit": -0.0, "isBold": false, "featAct": 10.6875, "bgColor": "#ffe6c7"}, {"tok": "1", "tokID": 29508, "tokenLogit": 0.0001, "isBold": false, "posToks": ["\u2581author", "ocument", "unit", "checked", "\u2581closely"], "negToks": ["FIG", "}_{", "\u2581expert", "\u2581elem", "\u2581Color"], "posVal": [0.125, 0.125, 0.125, 0.125, 0.125], "negVal": [-0.125, -0.125, -0.125, -0.125, -0.125], "lossEffect": -0.0625, "uColor": "rgb(239,239,255)"}, {"tok": "\u2581,", "tokID": 1968, "tokenLogit": 0.0, "isBold": true, "featAct": 29.75, "bgColor": "#ffb862"}, {"tok": "\u2581", "tokID": 29473, "tokenLogit": 0.0, "isBold": false, "posToks": ["\u2581shr", "\u2581Imper", "ishment", "([]", "<'"], "negToks": ["\u2581\u043f\u0435\u0440", "\u2581expert", "\u2581\u043f\u0456\u0434", "\u2581experts", "\u2581\u0441\u043f\u043e"], "posVal": [0.3125, 0.25, 0.25, 0.25, 0.25], "negVal": [-0.25, -0.25, -0.25, -0.25, -0.25], "lossEffect": -0.0625, "uColor": "rgb(239,239,255)"}, {"tok": "2", "tokID": 29518, "tokenLogit": 0.0, "isBold": false}, {"tok": "0", "tokID": 29502, "tokenLogit": 0.0, "isBold": false}, {"tok": "1", "tokID": 29508, "tokenLogit": 0.0001, "isBold": false}, {"tok": "6", "tokID": 29552, "tokenLogit": 0.0001, "isBold": false}], [{"tok": "\u2581ended", "tokID": 7822, "tokenLogit": -0.0, "isBold": false, "posToks": ["<0x97>", "<0x8B>", "<0x99>", "<0x9E>", "<0x9B>"], "negToks": ["<0xA1>", "<0x85>", "<0xA6>", "<0xB0>", "<0xA7>"], "posVal": [0.0625, 0.0625, 0.0625, 0.0625, 0.0625], "negVal": [-0.0625, -0.0625, -0.0625, -0.0625, -0.0625], "lossEffect": -0.0, "uColor": "rgb(255,255,255)"}, {"tok": "\u2581december", "tokID": 22923, "tokenLogit": 0.0, "isBold": false, "featAct": 20.5, "bgColor": "#ffce93"}, {"tok": "\u2581", "tokID": 29473, "tokenLogit": 0.0, "isBold": false, "featAct": 9.875, "bgColor": "#ffe8cb", "posToks": ["ishment", "ocument", "\u2581shr", "AAAAAAAA", "<'"], "negToks": ["\u2581\u0441\u043f\u043e", "\u2581expert", "\u2581dude", "limp", "Bitmap"], "posVal": [0.1875, 0.1875, 0.1875, 0.1875, 0.1875], "negVal": [-0.1875, -0.1875, -0.1875, -0.1875, -0.1875], "lossEffect": -0.0, "uColor": "rgb(255,255,255)"}, {"tok": "3", "tokID": 29538, "tokenLogit": -0.0, "isBold": false, "featAct": 10.875, "bgColor": "#ffe5c6", "posToks": ["<0x93>", "<0x85>", "<0x97>", "<0xBA>", "<0x9B>"], "negToks": ["<0x80>", "<0x09>", "<0xCF>", "\u2581\u2581\u2581\u2581", "<0xD3>"], "posVal": [0.0625, 0.0625, 0.0625, 0.0625, 0.0625], "negVal": [-0.0625, -0.0625, -0.0625, -0.0625, -0.0625], "lossEffect": -0.0, "uColor": "rgb(255,255,255)"}, {"tok": "1", "tokID": 29508, "tokenLogit": 0.0001, "isBold": false, "posToks": ["ittle", "<0xE8>", "\u2581might", "irm", "Requ"], "negToks": ["\u2581auf", "(\\", "\u2581r\u00e9", "\u2581doctor", "\u2581\u043d\u043e"], "posVal": [0.125, 0.125, 0.125, 0.125, 0.125], "negVal": [-0.125, -0.125, -0.125, -0.125, -0.125], "lossEffect": -0.0, "uColor": "rgb(255,255,255)"}, {"tok": "\u2581,", "tokID": 1968, "tokenLogit": 0.0, "isBold": true, "featAct": 29.125, "bgColor": "#ffba65"}, {"tok": "\u2581", "tokID": 29473, "tokenLogit": 0.0, "isBold": false, "featAct": 11.5, "bgColor": "#ffe3c2", "posToks": ["\u2581shr", "ishment", "usion", "ocument", "ract"], "negToks": ["eltemperaturen", "\u2581expert", "\u2581\u0441\u043f\u043e", "\u2581\u043f\u0456\u0434", "\u2581elem"], "posVal": [0.3125, 0.3125, 0.25, 0.25, 0.25], "negVal": [-0.3125, -0.3125, -0.25, -0.25, -0.25], "lossEffect": -0.0, "uColor": "rgb(255,255,255)"}, {"tok": "2", "tokID": 29518, "tokenLogit": 0.0, "isBold": false, "posToks": ["ishment", "\u2581closely", "<'", "tid", "<0x87>"], "negToks": ["\u2581dude", "\u2581disp", "\u2581\u0412\u044b", "\u2581Nintendo", "\u2581GPS"], "posVal": [0.125, 0.125, 0.125, 0.125, 0.0625], "negVal": [-0.125, -0.125, -0.125, -0.125, -0.125], "lossEffect": -0.0, "uColor": "rgb(255,255,255)"}, {"tok": "0", "tokID": 29502, "tokenLogit": 0.0, "isBold": false}, {"tok": "0", "tokID": 29502, "tokenLogit": 0.0, "isBold": false}, {"tok": "8", "tokID": 29551, "tokenLogit": 0.0001, "isBold": false}], [{"tok": "\u2581operations", "tokID": 7701, "tokenLogit": 0.0001, "isBold": false, "featAct": 11.25, "bgColor": "#ffe4c4", "posToks": ["ait", "<0xE8>", "ats", "ract", "urch"], "negToks": ["\u2581film", "Object", "\u2581auf", "\u2581\u0432\u044b", "bert"], "posVal": [0.125, 0.125, 0.125, 0.125, 0.125], "negVal": [-0.125, -0.125, -0.125, -0.125, -0.125], "lossEffect": -0.0625, "uColor": "rgb(239,239,255)"}, {"tok": "\u2581for", "tokID": 1122, "tokenLogit": 0.0, "isBold": false, "featAct": 12.375, "bgColor": "#ffe2be", "posToks": ["unit", "ittle", "\u2581protect", "\u2581distingu", "SY"], "negToks": ["\u2581kne", "FIG", "DEFAULT", "\u2581Duke", "\u2581vida"], "posVal": [0.125, 0.125, 0.125, 0.125, 0.125], "negVal": [-0.125, -0.125, -0.125, -0.125, -0.125], "lossEffect": -0.0, "uColor": "rgb(255,255,255)"}, {"tok": "\u2581the", "tokID": 1040, "tokenLogit": -0.0, "isBold": false, "featAct": 11.5625, "bgColor": "#ffe3c2", "posToks": ["ishment", "\u2581author", "\u2581shr", "LAB", "<0x86>"], "negToks": ["eltemperaturen", "\u2581by\u0142", "\u2581slammed", "\u2581GPS", "<0x09>"], "posVal": [0.125, 0.125, 0.125, 0.125, 0.0625], "negVal": [-0.125, -0.125, -0.125, -0.125, -0.0625], "lossEffect": -0.0, "uColor": "rgb(255,255,255)"}, {"tok": "\u2581year", "tokID": 1647, "tokenLogit": 0.0, "isBold": false, "featAct": 18.25, "bgColor": "#ffd49f", "posToks": ["([]", "<'", "ributes", "<0x8C>", "<0x89>"], "negToks": ["\u2581GPS", "eltemperaturen", "\u2581cidade", "<0xB3>", "<0x80>"], "posVal": [0.125, 0.125, 0.125, 0.0625, 0.0625], "negVal": [-0.125, -0.125, -0.125, -0.0625, -0.0625], "lossEffect": -0.0, "uColor": "rgb(255,255,255)"}, {"tok": "\u2581ended", "tokID": 7822, "tokenLogit": -0.0, "isBold": false, "featAct": 8.1875, "bgColor": "#ffecd4", "posToks": ["pon", "<0xE8>", "__", "ait", "igh"], "negToks": ["(\\", "im", "\u2581film", "\u2581five", "}_{"], "posVal": [0.125, 0.125, 0.125, 0.125, 0.125], "negVal": [-0.125, -0.125, -0.125, -0.125, -0.125], "lossEffect": -0.0, "uColor": "rgb(255,255,255)"}, {"tok": "\u2581december", "tokID": 22923, "tokenLogit": 0.0, "isBold": true, "featAct": 29.25, "bgColor": "#ffb964", "posToks": ["<0x9C>", "<0x87>", "<0xA2>", "<0xB4>", "<0xAB>"], "negToks": ["<0xA1>", "<s>", "\u2581d", "\u2581re", "\u2581p"], "posVal": [0.0625, 0.0625, 0.0625, 0.0625, 0.0625], "negVal": [-0.0625, -0.0625, -0.0625, -0.0625, -0.0625], "lossEffect": -0.0, "uColor": "rgb(255,255,255)"}, {"tok": "\u2581", "tokID": 29473, "tokenLogit": 0.0, "isBold": false, "featAct": 8.0625, "bgColor": "#ffecd5", "posToks": ["\u2581shr", "depend", "<'", "\u2581countr", "third"], "negToks": ["\u2581\u0441\u043f\u043e", "\u2581expert", "\u2581experts", "\u2581navigate", "\u2581dude"], "posVal": [0.25, 0.25, 0.25, 0.25, 0.25], "negVal": [-0.25, -0.25, -0.25, -0.25, -0.25], "lossEffect": -0.0625, "uColor": "rgb(239,239,255)"}, {"tok": "3", "tokID": 29538, "tokenLogit": -0.0, "isBold": false, "featAct": 12.4375, "bgColor": "#ffe2be", "posToks": ["<0x86>", "<0x82>", "<0x87>", "<0xAC>", "<0xA8>"], "negToks": ["<0xA1>", "<0x09>", "<0xBE>", "\u2581w", "\u2581t"], "posVal": [0.0625, 0.0625, 0.0625, 0.0625, 0.0625], "negVal": [-0.0625, -0.0625, -0.0625, -0.0625, -0.0625], "lossEffect": -0.0, "uColor": "rgb(255,255,255)"}, {"tok": "1", "tokID": 29508, "tokenLogit": 0.0001, "isBold": false, "featAct": 8.625, "bgColor": "#ffebd2", "posToks": ["\u2581Stre", "ittle", "card", "\u2581Da", "\u2581Sund"], "negToks": ["\u2581r\u00e9", "(\\", "\u2581song", "\u2581\u043f\u0435\u0440", "\u2581expert"], "posVal": [0.125, 0.125, 0.125, 0.125, 0.125], "negVal": [-0.125, -0.125, -0.125, -0.125, -0.125], "lossEffect": -0.0625, "uColor": "rgb(239,239,255)"}, {"tok": "\u2581,", "tokID": 1968, "tokenLogit": 0.0, "isBold": false, "featAct": 9.0, "bgColor": "#ffead0", "posToks": ["helpers", "<0x87>", "[/INST]", "<0x99>", "[AVAILABLE_TOOLS]"], "negToks": ["\u2581fog", "\u2581experts", "\u2581Referee", "\u2581k\u00f6r", "\u2581Nintendo"], "posVal": [0.125, 0.0625, 0.0625, 0.0625, 0.0625], "negVal": [-0.125, -0.125, -0.125, -0.125, -0.125], "lossEffect": -0.0, "uColor": "rgb(255,255,255)"}, {"tok": "\u2581", "tokID": 29473, "tokenLogit": 0.0, "isBold": false, "posToks": ["<0x8F>", "<0x8A>", "<0x9D>", "<0xA3>", "<0xA2>"], "negToks": ["<0x09>", "<s>", "<0x81>", "<0xA6>", "<0xA1>"], "posVal": [0.0625, 0.0625, 0.0625, 0.0625, 0.0625], "negVal": [-0.0625, -0.0625, -0.0625, -0.0625, -0.0625], "lossEffect": -0.0, "uColor": "rgb(255,255,255)"}], [{"tok": "\u2581other", "tokID": 1567, "tokenLogit": -0.0, "isBold": false}, {"tok": "\u2581accounts", "tokID": 10623, "tokenLogit": -0.0, "isBold": false}, {"tok": "\u2581rece", "tokID": 2848, "tokenLogit": -0.0001, "isBold": false}, {"tok": "iv", "tokID": 1217, "tokenLogit": 0.0, "isBold": false}, {"tok": "able", "tokID": 1290, "tokenLogit": 0.0, "isBold": false}, {"tok": "\u2581as", "tokID": 1158, "tokenLogit": -0.0, "isBold": true, "featAct": 30.875, "bgColor": "#ffb55c"}, {"tok": "\u2581of", "tokID": 1070, "tokenLogit": 0.0, "isBold": false, "featAct": 22.125, "bgColor": "#ffca8a", "posToks": ["\u2581shr", "ishment", "<'", "\u00eet", "share"], "negToks": ["\u2581GPS", "eltemperaturen", "\u2581expert", "gamma", "\u2581auf"], "posVal": [0.25, 0.25, 0.25, 0.25, 0.25], "negVal": [-0.25, -0.25, -0.1875, -0.1875, -0.1875], "lossEffect": -0.0625, "uColor": "rgb(239,239,255)"}, {"tok": "\u2581", "tokID": 29473, "tokenLogit": 0.0, "isBold": false, "posToks": ["ait", "<0x87>", "serv", "ocument", "\u2581might"], "negToks": ["FIG", "\u2581\u043d\u043e", "\u2581p\u0159", "\u2581expert", "\u2581cer"], "posVal": [0.125, 0.125, 0.125, 0.125, 0.125], "negVal": [-0.125, -0.125, -0.125, -0.125, -0.125], "lossEffect": -0.0, "uColor": "rgb(255,255,255)"}, {"tok": "2", "tokID": 29518, "tokenLogit": 0.0, "isBold": false}, {"tok": "0", "tokID": 29502, "tokenLogit": 0.0, "isBold": false}, {"tok": "1", "tokID": 29508, "tokenLogit": 0.0001, "isBold": false}], [{"tok": "\u2581continue", "tokID": 4456, "tokenLogit": 0.0, "isBold": false}, {"tok": "\u2581to", "tokID": 1066, "tokenLogit": 0.0, "isBold": false}, {"tok": "\u2581support", "tokID": 2528, "tokenLogit": -0.0, "isBold": false}, {"tok": "\u2581an", "tokID": 1164, "tokenLogit": -0.0001, "isBold": false}, {"tok": "\u2581in", "tokID": 1065, "tokenLogit": -0.0, "isBold": false}, {"tok": "def", "tokID": 2038, "tokenLogit": 0.0, "isBold": true, "featAct": 31.0, "bgColor": "#ffb55b"}, {"tok": "in", "tokID": 1030, "tokenLogit": -0.0, "isBold": false, "posToks": ["\u2581shr", "\u2581closely", "ocument", "etr", "usion"], "negToks": ["eltemperaturen", "\u2581fog", "\u2581\u0441\u043f\u043e", "\u2581Philip", "\u2581expert"], "posVal": [0.3125, 0.25, 0.25, 0.25, 0.25], "negVal": [-0.3125, -0.3125, -0.25, -0.25, -0.25], "lossEffect": -0.0, "uColor": "rgb(255,255,255)"}, {"tok": "ite", "tokID": 1338, "tokenLogit": -0.0, "isBold": false}, {"tok": "\u2581life", "tokID": 2179, "tokenLogit": 0.0, "isBold": false}, {"tok": "\u2581.", "tokID": 1610, "tokenLogit": 0.0, "isBold": false}, {"tok": "<0x0A>", "tokID": 781, "tokenLogit": -0.0, "isBold": false}]], "idSuffix": "0", "title": "INTERVAL 28.950 - 33.775<br>CONTAINS 0.006%"}, "seq-group-1-5": {"data": [[{"tok": "\u2581money", "tokID": 3213, "tokenLogit": -0.0, "isBold": false}, {"tok": "\u2581pool", "tokID": 7081, "tokenLogit": -0.0, "isBold": false, "featAct": 7.125, "bgColor": "#ffeeda"}, {"tok": "\u2581were", "tokID": 1422, "tokenLogit": -0.0001, "isBold": false, "featAct": 8.8125, "bgColor": "#ffead1", "posToks": ["<0x87>", "<0x82>", "<0x8E>", "<0x99>", "<0x93>"], "negToks": ["<0xA6>", "<0x80>", "<0xB3>", "<0xC6>", "<0xBE>"], "posVal": [0.0625, 0.0625, 0.0625, 0.0625, 0.0625], "negVal": [-0.0625, -0.0625, -0.0625, -0.0625, -0.0625], "lossEffect": -0.0, "uColor": "rgb(255,255,255)"}, {"tok": "\u2581as", "tokID": 1158, "tokenLogit": -0.0, "isBold": false, "featAct": 7.5312, "bgColor": "#ffedd8", "posToks": ["<0x97>", "<0x91>", "<0x9B>", "<0x9E>", "<0x9D>"], "negToks": ["<0x98>", "<0x09>", "<0xA1>", "<0xB3>", "<0xA7>"], "posVal": [0.0625, 0.0625, 0.0625, 0.0625, 0.0625], "negVal": [-0.0625, -0.0625, -0.0625, -0.0625, -0.0625], "lossEffect": -0.0, "uColor": "rgb(255,255,255)"}, {"tok": "\u2581follows", "tokID": 6872, "tokenLogit": 0.0002, "isBold": false, "posToks": ["<0x8A>", "[INST]", "<0x8B>", "<0x99>", "<0x8E>"], "negToks": ["<0x0A>", "<0x09>", "<0xB8>", "<0xCD>", "<0xC5>"], "posVal": [0.0625, 0.0625, 0.0625, 0.0625, 0.0625], "negVal": [-0.0625, -0.0625, -0.0625, -0.0625, -0.0625], "lossEffect": -0.0625, "uColor": "rgb(239,239,255)"}, {"tok": "\u2581as", "tokID": 1158, "tokenLogit": -0.0, "isBold": true, "featAct": 25.875, "bgColor": "#ffc176"}, {"tok": "\u2581of", "tokID": 1070, "tokenLogit": 0.0, "isBold": false, "posToks": ["ract", "ats", "usion", "ributes", "ocol"], "negToks": ["\u2581\u0432\u044b", "\u2581auf", "\u2581\u043d\u043e", "\u2581\u043f\u0435\u0440", "\u2581expert"], "posVal": [0.1875, 0.1875, 0.1875, 0.1875, 0.1875], "negVal": [-0.1875, -0.1875, -0.1875, -0.1875, -0.1875], "lossEffect": -0.0, "uColor": "rgb(255,255,255)"}, {"tok": "\u2581december", "tokID": 22923, "tokenLogit": 0.0, "isBold": false, "featAct": 20.125, "bgColor": "#ffcf95"}, {"tok": "\u2581", "tokID": 29473, "tokenLogit": 0.0, "isBold": false, "posToks": ["<'", "usion", "\u2581Imper", "\u6ce8", "share"], "negToks": ["\u2581Referee", "\u2581experts", "\u2581TD", "\u2581k\u00f6r", "\u2581ne"], "posVal": [0.1875, 0.1875, 0.1875, 0.1875, 0.1875], "negVal": [-0.1875, -0.1875, -0.1875, -0.1875, -0.125], "lossEffect": -0.0, "uColor": "rgb(255,255,255)"}, {"tok": "3", "tokID": 29538, "tokenLogit": -0.0, "isBold": false, "featAct": 11.8125, "bgColor": "#ffe3c1"}, {"tok": "1", "tokID": 29508, "tokenLogit": 0.0001, "isBold": false, "featAct": 9.0625, "bgColor": "#ffe9cf", "posToks": ["ading", "ributes", "\u2581Sud", "\u2581shr", "etr"], "negToks": ["\u2581Philip", "\u2581expert", "\u2581experts", "\u2581vida", "\u2581nome"], "posVal": [0.125, 0.125, 0.125, 0.125, 0.125], "negVal": [-0.125, -0.125, -0.125, -0.125, -0.125], "lossEffect": -0.0625, "uColor": "rgb(239,239,255)"}], [{"tok": "aries", "tokID": 5606, "tokenLogit": 0.0001, "isBold": false, "featAct": 11.8125, "bgColor": "#ffe3c1"}, {"tok": "\u2581notes", "tokID": 9089, "tokenLogit": 0.0001, "isBold": false, "featAct": 16.0, "bgColor": "#ffd9ab", "posToks": ["ird", "ats", "\u2581author", "Helper", "ocol"], "negToks": ["\u2581sie", "\u2581lat", "\u2581\u043d\u043e", "\u2581expert", "\u2581currently"], "posVal": [0.125, 0.125, 0.125, 0.125, 0.125], "negVal": [-0.125, -0.125, -0.125, -0.125, -0.125], "lossEffect": -0.0, "uColor": "rgb(255,255,255)"}, {"tok": "\u2581to", "tokID": 1066, "tokenLogit": 0.0, "isBold": false, "featAct": 12.0, "bgColor": "#ffe3c0", "posToks": ["pon", "<0x97>", "\u2581may", "\u2581follow", "ait"], "negToks": ["param", "\u2581sl", "(\\", "\u2581film", "\u2581others"], "posVal": [0.125, 0.125, 0.125, 0.125, 0.125], "negVal": [-0.125, -0.125, -0.125, -0.125, -0.125], "lossEffect": -0.0, "uColor": "rgb(255,255,255)"}, {"tok": "\u2581consolid", "tokID": 23736, "tokenLogit": -0.0, "isBold": false, "featAct": 21.25, "bgColor": "#ffcc8f", "posToks": ["third", "([]", "\u2581Confeder", "\u8fed", "\u968f"], "negToks": ["\u2581dol", "\u2581experts", "\u2581Duke", "\u2581Referee", "\u2581g\u00e9n\u00e9ral"], "posVal": [0.125, 0.125, 0.125, 0.125, 0.125], "negVal": [-0.125, -0.125, -0.125, -0.125, -0.125], "lossEffect": -0.0, "uColor": "rgb(255,255,255)"}, {"tok": "ated", "tokID": 1369, "tokenLogit": 0.0001, "isBold": false, "featAct": 20.0, "bgColor": "#ffcf95", "posToks": ["\u2581Southern", "\u2581closely", "ishment", "<'", "\u2581shr"], "negToks": ["\u2581expert", "\u2581\u043f\u0435\u0440", "\u2581r\u00e9", "\u2581Philip", "\u2581\u043d\u043e"], "posVal": [0.1875, 0.1875, 0.1875, 0.1875, 0.1875], "negVal": [-0.25, -0.1875, -0.1875, -0.1875, -0.1875], "lossEffect": -0.0625, "uColor": "rgb(239,239,255)"}, {"tok": "\u2581financial", "tokID": 6361, "tokenLogit": -0.0, "isBold": true, "featAct": 26.375, "bgColor": "#ffc074", "posToks": ["depend", "ributes", "etr", "\u2581Dans", "ishment"], "negToks": ["\u2581wrapped", "\u2581expert", "iane", "Walk", "\u2581navigate"], "posVal": [0.1875, 0.1875, 0.1875, 0.1875, 0.1875], "negVal": [-0.1875, -0.1875, -0.1875, -0.1875, -0.1875], "lossEffect": -0.0, "uColor": "rgb(255,255,255)"}, {"tok": "\u2581statements", "tokID": 13676, "tokenLogit": 0.0001, "isBold": false, "featAct": 18.375, "bgColor": "#ffd39e", "posToks": ["ishment", "ributes", "\u2581shr", "([]", "<'"], "negToks": ["\u2581fog", "\u2581experts", "\u2581elem", "Phi", "\u2581expert"], "posVal": [0.25, 0.25, 0.25, 0.25, 0.25], "negVal": [-0.3125, -0.3125, -0.25, -0.25, -0.25], "lossEffect": -0.0, "uColor": "rgb(255,255,255)"}, {"tok": "\u2581", "tokID": 29473, "tokenLogit": 0.0, "isBold": false, "featAct": 15.3125, "bgColor": "#ffdaae", "posToks": ["ittle", "ats", "\u2581might", "ocument", "ract"], "negToks": ["(\\", "param", "\u2581\u0434\u0435", "bert", "\u2581lat"], "posVal": [0.125, 0.125, 0.125, 0.125, 0.125], "negVal": [-0.125, -0.125, -0.125, -0.125, -0.125], "lossEffect": -0.0625, "uColor": "rgb(239,239,255)"}, {"tok": "2", "tokID": 29518, "tokenLogit": 0.0, "isBold": false, "featAct": 19.75, "bgColor": "#ffd097", "posToks": ["<0xE8>", "<0x97>", "pon", "ird", "\u2581requ"], "negToks": ["\u2581r\u00e9", "}_{", "\u2581lat", "Ge", "bert"], "posVal": [0.125, 0.125, 0.125, 0.125, 0.125], "negVal": [-0.125, -0.125, -0.125, -0.125, -0.125], "lossEffect": -0.0, "uColor": "rgb(255,255,255)"}, {"tok": "0", "tokID": 29502, "tokenLogit": 0.0, "isBold": false, "featAct": 18.0, "bgColor": "#ffd4a0", "posToks": ["depend", "ract", "\u2581closely", "<'", "\u2581shr"], "negToks": ["\u2581\u043f\u0456\u0434", "\u2581expert", "\u2581\u0441\u043f\u043e", "\u2581Duke", "\u2581vida"], "posVal": [0.1875, 0.1875, 0.1875, 0.1875, 0.1875], "negVal": [-0.1875, -0.1875, -0.1875, -0.1875, -0.1875], "lossEffect": -0.0, "uColor": "rgb(255,255,255)"}, {"tok": "1", "tokID": 29508, "tokenLogit": 0.0001, "isBold": false, "featAct": 12.625, "bgColor": "#ffe1bd", "posToks": ["ishment", "usion", "\u2581shr", "\u2581countr", "<0x87>"], "negToks": ["\u2581vida", "\u2581\u0441\u043f\u043e", "\u2581dude", "limp", "\u2581zo"], "posVal": [0.1875, 0.1875, 0.1875, 0.1875, 0.125], "negVal": [-0.1875, -0.1875, -0.1875, -0.1875, -0.1875], "lossEffect": -0.0625, "uColor": "rgb(239,239,255)"}], [{"tok": "change", "tokID": 4846, "tokenLogit": 0.0, "isBold": false}, {"tok": "\u2581act", "tokID": 1728, "tokenLogit": 0.0001, "isBold": false}, {"tok": "\"", "tokID": 29507, "tokenLogit": -0.0001, "isBold": false}, {"tok": "\u2581)", "tokID": 1911, "tokenLogit": -0.0, "isBold": false}, {"tok": "\u2581)", "tokID": 1911, "tokenLogit": -0.0, "isBold": false}, {"tok": "\u2581as", "tokID": 1158, "tokenLogit": -0.0, "isBold": true, "featAct": 28.0, "bgColor": "#ffbc6b"}, {"tok": "\u2581of", "tokID": 1070, "tokenLogit": 0.0, "isBold": false, "posToks": ["<'", "\u2581shr", "\u2581might", "ittle", "<0xE8>"], "negToks": ["\u2581Duke", "\u2581\u043d\u043e", "\u2581auf", "\u2581expert", "\u2581\u0432\u044b"], "posVal": [0.25, 0.25, 0.1875, 0.1875, 0.1875], "negVal": [-0.25, -0.1875, -0.1875, -0.1875, -0.1875], "lossEffect": -0.0625, "uColor": "rgb(239,239,255)"}, {"tok": "\u2581december", "tokID": 22923, "tokenLogit": 0.0, "isBold": false, "featAct": 27.5, "bgColor": "#ffbe6e"}, {"tok": "\u2581", "tokID": 29473, "tokenLogit": 0.0, "isBold": false, "posToks": ["<'", "\u2581shr", "\u2581Imper", "lif", "work"], "negToks": ["\u2581vida", "\u2581experts", "\u2581fog", "eltemperaturen", "\u2581TD"], "posVal": [0.25, 0.25, 0.25, 0.25, 0.1875], "negVal": [-0.25, -0.25, -0.25, -0.25, -0.25], "lossEffect": -0.0, "uColor": "rgb(255,255,255)"}, {"tok": "3", "tokID": 29538, "tokenLogit": -0.0, "isBold": false, "featAct": 13.875, "bgColor": "#ffdeb6"}, {"tok": "1", "tokID": 29508, "tokenLogit": 0.0001, "isBold": false, "posToks": ["\u2581shr", "ittle", "<0x97>", "ird", "work"], "negToks": ["\u2581experts", "AP", "cess", "\u2581film", "(\\"], "posVal": [0.1875, 0.125, 0.125, 0.125, 0.125], "negVal": [-0.1875, -0.125, -0.125, -0.125, -0.125], "lossEffect": -0.0, "uColor": "rgb(255,255,255)"}], [{"tok": "\u2581amounts", "tokID": 15606, "tokenLogit": -0.0, "isBold": false}, {"tok": "\u2581)", "tokID": 1911, "tokenLogit": -0.0, "isBold": false}, {"tok": "|", "tokID": 29534, "tokenLogit": 0.0, "isBold": false}, {"tok": "year", "tokID": 5163, "tokenLogit": 0.0, "isBold": false}, {"tok": "\u2581ended", "tokID": 7822, "tokenLogit": -0.0, "isBold": false}, {"tok": "\u2581december", "tokID": 22923, "tokenLogit": 0.0, "isBold": true, "featAct": 29.0, "bgColor": "#ffba66"}, {"tok": "\u2581", "tokID": 29473, "tokenLogit": 0.0, "isBold": false, "posToks": ["\u2581shr", "depend", "usion", "\u2581closely", "ributes"], "negToks": ["\u2581\u0432\u044b", "\u2581r\u00e9", "FIG", "\u2581kne", "\u2581expert"], "posVal": [0.3125, 0.25, 0.25, 0.25, 0.25], "negVal": [-0.25, -0.25, -0.25, -0.25, -0.25], "lossEffect": -0.0, "uColor": "rgb(255,255,255)"}, {"tok": "3", "tokID": 29538, "tokenLogit": -0.0, "isBold": false, "featAct": 12.25, "bgColor": "#ffe2bf"}, {"tok": "1", "tokID": 29508, "tokenLogit": 0.0001, "isBold": false, "featAct": 14.6875, "bgColor": "#ffdcb2", "posToks": ["\u2581author", "\u2581might", "\u2581\u043e\u0441", "ishment", "\u2581closely"], "negToks": ["Phi", "\u2581expert", "\u2581elem", "\u2581fest", "\u2581\u0441\u043f\u043e"], "posVal": [0.125, 0.125, 0.125, 0.125, 0.125], "negVal": [-0.125, -0.125, -0.125, -0.125, -0.125], "lossEffect": -0.0, "uColor": "rgb(255,255,255)"}, {"tok": "\u2581", "tokID": 29473, "tokenLogit": 0.0, "isBold": false, "posToks": ["([]", "igh", "pon", "ife", "\u0435\u043d"], "negToks": ["\u2581experts", "(\\", "\u2581ne", "\u2581eff", "\u2581sl"], "posVal": [0.1875, 0.125, 0.125, 0.125, 0.125], "negVal": [-0.1875, -0.125, -0.125, -0.125, -0.125], "lossEffect": -0.0, "uColor": "rgb(255,255,255)"}, {"tok": "2", "tokID": 29518, "tokenLogit": 0.0, "isBold": false, "featAct": 12.0, "bgColor": "#ffe3c0"}], [{"tok": "7", "tokID": 29555, "tokenLogit": 0.0, "isBold": false, "featAct": 18.375, "bgColor": "#ffd39e", "posToks": ["\u2581countr", "<'", "usion", "<0x97>", "<0x87>"], "negToks": ["\u2581experts", "\u2581\u0441\u043f\u043e", "AP", "param", "\u2581ne"], "posVal": [0.1875, 0.1875, 0.1875, 0.125, 0.125], "negVal": [-0.1875, -0.1875, -0.125, -0.125, -0.125], "lossEffect": -0.0, "uColor": "rgb(255,255,255)"}, {"tok": "\u2581to", "tokID": 1066, "tokenLogit": 0.0, "isBold": false, "featAct": 18.625, "bgColor": "#ffd39d", "posToks": ["usion", "ract", "Helper", "\u2581closely", "runtime"], "negToks": ["\u2581r\u00e9", "\u2581auf", "\u2581\u0432\u044b", "\u2581elem", "\u2581expert"], "posVal": [0.1875, 0.1875, 0.1875, 0.1875, 0.1875], "negVal": [-0.1875, -0.1875, -0.1875, -0.1875, -0.1875], "lossEffect": -0.0, "uColor": "rgb(255,255,255)"}, {"tok": "\u2581our", "tokID": 1581, "tokenLogit": -0.0, "isBold": false, "featAct": 13.8125, "bgColor": "#ffdeb6", "posToks": ["ird", "ever", "ocument", "ische", "iddle"], "negToks": ["\u2581\u043d\u043e", "\u2581auf", "FIG", "\u2581\u0441\u043f\u043e", "\u2581\u043f\u0435\u0440"], "posVal": [0.125, 0.125, 0.125, 0.125, 0.125], "negVal": [-0.125, -0.125, -0.125, -0.125, -0.125], "lossEffect": -0.0, "uColor": "rgb(255,255,255)"}, {"tok": "\u2581consolid", "tokID": 23736, "tokenLogit": -0.0, "isBold": false, "featAct": 20.0, "bgColor": "#ffcf95", "posToks": ["\u2581Lie", "\u2581author", "depend", "checked", "\u2581closely"], "negToks": ["\u2581\u0441\u043f\u043e", "Phi", "\u2581dol", "\u2581disp", "\u2581nome"], "posVal": [0.125, 0.125, 0.125, 0.125, 0.125], "negVal": [-0.125, -0.125, -0.125, -0.125, -0.125], "lossEffect": -0.0, "uColor": "rgb(255,255,255)"}, {"tok": "ated", "tokID": 1369, "tokenLogit": 0.0001, "isBold": false, "featAct": 18.5, "bgColor": "#ffd39d", "posToks": ["depend", "runtime", "\u2581closely", "\u2581shr", "ishment"], "negToks": ["\u2581\u0432\u044b", "\u2581auf", "\u2581expert", "\u2581compat", "\u2581elem"], "posVal": [0.1875, 0.1875, 0.1875, 0.1875, 0.1875], "negVal": [-0.1875, -0.1875, -0.1875, -0.1875, -0.1875], "lossEffect": -0.125, "uColor": "rgb(223,223,255)"}, {"tok": "\u2581financial", "tokID": 6361, "tokenLogit": -0.0, "isBold": true, "featAct": 24.5, "bgColor": "#ffc57e", "posToks": ["serv", "pon", "ever", "ird", "\u2581might"], "negToks": ["\u2581lat", "\u2581r\u00e9", "\u2581fuck", "bert", "\u2581mode"], "posVal": [0.125, 0.125, 0.125, 0.125, 0.125], "negVal": [-0.125, -0.125, -0.125, -0.125, -0.125], "lossEffect": -0.0625, "uColor": "rgb(239,239,255)"}, {"tok": "\u2581statements", "tokID": 13676, "tokenLogit": 0.0001, "isBold": false, "featAct": 11.5625, "bgColor": "#ffe3c2", "posToks": ["ishment", "usion", "\u2581shr", "\u2581Dans", "<'"], "negToks": ["\u2581experts", "\u2581expert", "\u2581vida", "\u2581Duke", "\u2581weiter"], "posVal": [0.25, 0.25, 0.25, 0.25, 0.25], "negVal": [-0.25, -0.25, -0.25, -0.25, -0.25], "lossEffect": -0.0625, "uColor": "rgb(239,239,255)"}, {"tok": "\u2581.", "tokID": 1610, "tokenLogit": 0.0, "isBold": false, "posToks": ["\u2581neck", "usion", "\u2581Lie", "HTML", "uding"], "negToks": ["bert", "}_{", "\u2581films", "\u2581experts", "\u2581\u0441\u043f\u043e"], "posVal": [0.125, 0.125, 0.125, 0.125, 0.125], "negVal": [-0.125, -0.125, -0.125, -0.125, -0.125], "lossEffect": -0.0625, "uColor": "rgb(239,239,255)"}, {"tok": "<0x0A>", "tokID": 781, "tokenLogit": -0.0, "isBold": false}, {"tok": "the", "tokID": 2005, "tokenLogit": -0.0001, "isBold": false}, {"tok": "\u2581amount", "tokID": 4326, "tokenLogit": -0.0, "isBold": false}]], "idSuffix": "0", "title": "INTERVAL 24.125 - 28.950<br>CONTAINS 0.017%"}, "seq-group-1-6": {"data": [[{"tok": "\u2581)", "tokID": 1911, "tokenLogit": -0.0, "isBold": false}, {"tok": "|", "tokID": 29534, "tokenLogit": 0.0, "isBold": false}, {"tok": "year", "tokID": 5163, "tokenLogit": 0.0, "isBold": false}, {"tok": "s", "tokID": 29481, "tokenLogit": 0.0, "isBold": false, "featAct": 8.6875, "bgColor": "#ffead1"}, {"tok": "\u2581ended", "tokID": 7822, "tokenLogit": -0.0, "isBold": false, "posToks": ["([]", "ishment", "<0x8B>", "<0x8A>", "<0x87>"], "negToks": ["eltemperaturen", "\u2581expert", "<0xEB>", "<0x95>", "<0x09>"], "posVal": [0.125, 0.125, 0.0625, 0.0625, 0.0625], "negVal": [-0.125, -0.125, -0.0625, -0.0625, -0.0625], "lossEffect": -0.0, "uColor": "rgb(255,255,255)"}, {"tok": "\u2581december", "tokID": 22923, "tokenLogit": 0.0, "isBold": true, "featAct": 21.875, "bgColor": "#ffcb8b"}, {"tok": "\u2581", "tokID": 29473, "tokenLogit": 0.0, "isBold": false, "featAct": 8.625, "bgColor": "#ffebd2", "posToks": ["\u2581shr", "thern", "ract", "\u2581earth", "usion"], "negToks": ["\u2581experts", "\u2581expert", "\u2581sie", "\u2581bod", "\u2581\u043d\u043e"], "posVal": [0.25, 0.1875, 0.1875, 0.1875, 0.1875], "negVal": [-0.25, -0.1875, -0.1875, -0.1875, -0.1875], "lossEffect": -0.0, "uColor": "rgb(255,255,255)"}, {"tok": "3", "tokID": 29538, "tokenLogit": -0.0, "isBold": false, "featAct": 7.7812, "bgColor": "#ffedd6", "posToks": ["<0x8B>", "<0x87>", "<0xA3>", "<0xAB>", "<0xA9>"], "negToks": ["<0xA0>", "<0x80>", "<0xA1>", "<0xC5>", "<0xA7>"], "posVal": [0.0625, 0.0625, 0.0625, 0.0625, 0.0625], "negVal": [-0.0625, -0.0625, -0.0625, -0.0625, -0.0625], "lossEffect": -0.0, "uColor": "rgb(255,255,255)"}, {"tok": "1", "tokID": 29508, "tokenLogit": 0.0001, "isBold": false, "posToks": ["\u2581shr", "<0x97>", "[AVAILABLE_TOOLS]", "<0x9E>", "<0x8F>"], "negToks": ["<0x84>", "<0x09>", "<0x85>", "<0xB0>", "<0x95>"], "posVal": [0.125, 0.0625, 0.0625, 0.0625, 0.0625], "negVal": [-0.0625, -0.0625, -0.0625, -0.0625, -0.0625], "lossEffect": -0.0, "uColor": "rgb(255,255,255)"}, {"tok": "\u2581,", "tokID": 1968, "tokenLogit": 0.0, "isBold": false, "featAct": 15.875, "bgColor": "#ffd9ab"}, {"tok": "\u2581", "tokID": 29473, "tokenLogit": 0.0, "isBold": false, "featAct": 11.3125, "bgColor": "#ffe4c3", "posToks": ["\u2581countr", "\u2581shr", "<0xE8>", "<0x97>", "<0x87>"], "negToks": ["\u2581experts", "\u2581expert", "\u2581fog", "eltemperaturen", "\u2581dude"], "posVal": [0.1875, 0.1875, 0.125, 0.125, 0.125], "negVal": [-0.1875, -0.1875, -0.1875, -0.1875, -0.1875], "lossEffect": -0.0625, "uColor": "rgb(239,239,255)"}], [{"tok": "\u2581ended", "tokID": 7822, "tokenLogit": -0.0, "isBold": false, "posToks": ["ishment", "pon", "<0x87>", "igh", "',"], "negToks": ["\u2581k\u00f6r", "eltemperaturen", "param", "\u2581sl", "\u2581ne"], "posVal": [0.1875, 0.125, 0.125, 0.125, 0.125], "negVal": [-0.1875, -0.1875, -0.125, -0.125, -0.125], "lossEffect": 0.0625, "uColor": "rgb(255,239,239)"}, {"tok": "\u2581december", "tokID": 22923, "tokenLogit": 0.0, "isBold": false, "featAct": 26.5, "bgColor": "#ffc073"}, {"tok": "\u2581", "tokID": 29473, "tokenLogit": 0.0, "isBold": false, "posToks": ["\u2581countr", "Requ", "<0xE8>", "ocument", "\u2581might"], "negToks": ["eltemperaturen", "\u2581\u0441\u043f\u043e", "bert", "\u2581auf", "(\\"], "posVal": [0.25, 0.1875, 0.1875, 0.1875, 0.1875], "negVal": [-0.25, -0.25, -0.1875, -0.1875, -0.1875], "lossEffect": -0.0, "uColor": "rgb(255,255,255)"}, {"tok": "3", "tokID": 29538, "tokenLogit": -0.0, "isBold": false}, {"tok": "1", "tokID": 29508, "tokenLogit": 0.0001, "isBold": false}, {"tok": "\u2581,", "tokID": 1968, "tokenLogit": 0.0, "isBold": true, "featAct": 23.375, "bgColor": "#ffc783"}, {"tok": "\u2581", "tokID": 29473, "tokenLogit": 0.0, "isBold": false, "posToks": [",.", "<'", "ishment", "irm", "ocument"], "negToks": ["\u2581fog", "\u2581altern", "\u2581r\u00e9", "\u2581expert", "\u2581currently"], "posVal": [0.25, 0.25, 0.25, 0.1875, 0.1875], "negVal": [-0.25, -0.1875, -0.1875, -0.1875, -0.1875], "lossEffect": -0.0625, "uColor": "rgb(239,239,255)"}, {"tok": "2", "tokID": 29518, "tokenLogit": 0.0, "isBold": false}, {"tok": "0", "tokID": 29502, "tokenLogit": 0.0, "isBold": false}, {"tok": "1", "tokID": 29508, "tokenLogit": 0.0001, "isBold": false}, {"tok": "5", "tokID": 29550, "tokenLogit": 0.0001, "isBold": false}], [{"tok": "<0x0A>", "tokID": 781, "tokenLogit": -0.0, "isBold": false}, {"tok": "and", "tokID": 1159, "tokenLogit": 0.0, "isBold": false}, {"tok": "\u2581subs", "tokID": 12762, "tokenLogit": -0.0, "isBold": false}, {"tok": "idi", "tokID": 10832, "tokenLogit": 0.0, "isBold": false}, {"tok": "aries", "tokID": 5606, "tokenLogit": 0.0001, "isBold": false, "featAct": 16.5, "bgColor": "#ffd8a8"}, {"tok": "\u2581notes", "tokID": 9089, "tokenLogit": 0.0001, "isBold": true, "featAct": 21.5, "bgColor": "#ffcc8d", "posToks": ["share", "([]", "<'", "<0xE8>", "<0x97>"], "negToks": ["Walk", "\u2581experts", "eltemperaturen", "\u2581k\u00f6r", "\u2581GPS"], "posVal": [0.1875, 0.1875, 0.1875, 0.125, 0.125], "negVal": [-0.1875, -0.1875, -0.1875, -0.1875, -0.1875], "lossEffect": -0.0625, "uColor": "rgb(239,239,255)"}, {"tok": "\u2581to", "tokID": 1066, "tokenLogit": 0.0, "isBold": false, "featAct": 12.8125, "bgColor": "#ffe1bc", "posToks": ["\u2581occup", "unit", "runtime", "\u2581closely", "\u2581Such"], "negToks": ["\u2581expert", "\u2581r\u00e9", "\u2581\u0441\u043f\u043e", "\u2581hade", "\u2581experts"], "posVal": [0.1875, 0.1875, 0.1875, 0.1875, 0.1875], "negVal": [-0.1875, -0.1875, -0.1875, -0.1875, -0.1875], "lossEffect": -0.0, "uColor": "rgb(255,255,255)"}, {"tok": "\u2581consolid", "tokID": 23736, "tokenLogit": -0.0, "isBold": false, "featAct": 22.0, "bgColor": "#ffcb8b", "posToks": ["ract", "<0xE8>", "ird", "\u2581Stre", "ische"], "negToks": ["\u2581r\u00e9", "\u2581auf", "gamma", "\u2581sie", "\u2581\u0432\u044b"], "posVal": [0.125, 0.125, 0.125, 0.125, 0.125], "negVal": [-0.125, -0.125, -0.125, -0.125, -0.125], "lossEffect": -0.0, "uColor": "rgb(255,255,255)"}, {"tok": "ated", "tokID": 1369, "tokenLogit": 0.0001, "isBold": false, "featAct": 19.5, "bgColor": "#ffd198", "posToks": ["\u2581XV", "usion", "depend", "\u2581shr", "ishment"], "negToks": ["\u2581expert", "\u2581r\u00e9", "\u2581kne", "\u2581experts", "\u2581\u0441\u043f\u043e"], "posVal": [0.1875, 0.1875, 0.1875, 0.1875, 0.1875], "negVal": [-0.1875, -0.1875, -0.1875, -0.1875, -0.1875], "lossEffect": -0.0625, "uColor": "rgb(239,239,255)"}, {"tok": "\u2581financial", "tokID": 6361, "tokenLogit": -0.0, "isBold": false, "featAct": 27.0, "bgColor": "#ffbf70", "posToks": ["\u2581shr", "depend", "\u00eet", "nals", "lif"], "negToks": ["\u2581Duke", "\u2581elem", "iane", "\u2581Gaussian", "\u2581navigate"], "posVal": [0.1875, 0.1875, 0.1875, 0.1875, 0.1875], "negVal": [-0.1875, -0.1875, -0.1875, -0.1875, -0.1875], "lossEffect": -0.0, "uColor": "rgb(255,255,255)"}, {"tok": "\u2581statements", "tokID": 13676, "tokenLogit": 0.0001, "isBold": false, "featAct": 22.125, "bgColor": "#ffca8a", "posToks": ["ishment", "depend", "\u2581shr", "([]", "<'"], "negToks": ["\u2581experts", "\u2581expert", "\u2581vida", "\u2581dude", "\u2581fog"], "posVal": [0.25, 0.25, 0.25, 0.25, 0.25], "negVal": [-0.25, -0.25, -0.25, -0.25, -0.25], "lossEffect": -0.0625, "uColor": "rgb(239,239,255)"}], [{"tok": "\u2581notes", "tokID": 9089, "tokenLogit": 0.0001, "isBold": false, "featAct": 16.0, "bgColor": "#ffd9ab", "posToks": ["ird", "ats", "\u2581author", "Helper", "ocol"], "negToks": ["\u2581sie", "\u2581lat", "\u2581\u043d\u043e", "\u2581expert", "\u2581currently"], "posVal": [0.125, 0.125, 0.125, 0.125, 0.125], "negVal": [-0.125, -0.125, -0.125, -0.125, -0.125], "lossEffect": -0.0, "uColor": "rgb(255,255,255)"}, {"tok": "\u2581to", "tokID": 1066, "tokenLogit": 0.0, "isBold": false, "featAct": 12.0, "bgColor": "#ffe3c0", "posToks": ["pon", "<0x97>", "\u2581may", "\u2581follow", "ait"], "negToks": ["param", "\u2581sl", "(\\", "\u2581film", "\u2581others"], "posVal": [0.125, 0.125, 0.125, 0.125, 0.125], "negVal": [-0.125, -0.125, -0.125, -0.125, -0.125], "lossEffect": -0.0, "uColor": "rgb(255,255,255)"}, {"tok": "\u2581consolid", "tokID": 23736, "tokenLogit": -0.0, "isBold": false, "featAct": 21.25, "bgColor": "#ffcc8f", "posToks": ["third", "([]", "\u2581Confeder", "\u8fed", "\u968f"], "negToks": ["\u2581dol", "\u2581experts", "\u2581Duke", "\u2581Referee", "\u2581g\u00e9n\u00e9ral"], "posVal": [0.125, 0.125, 0.125, 0.125, 0.125], "negVal": [-0.125, -0.125, -0.125, -0.125, -0.125], "lossEffect": -0.0, "uColor": "rgb(255,255,255)"}, {"tok": "ated", "tokID": 1369, "tokenLogit": 0.0001, "isBold": false, "featAct": 20.0, "bgColor": "#ffcf95", "posToks": ["\u2581Southern", "\u2581closely", "ishment", "<'", "\u2581shr"], "negToks": ["\u2581expert", "\u2581\u043f\u0435\u0440", "\u2581r\u00e9", "\u2581Philip", "\u2581\u043d\u043e"], "posVal": [0.1875, 0.1875, 0.1875, 0.1875, 0.1875], "negVal": [-0.25, -0.1875, -0.1875, -0.1875, -0.1875], "lossEffect": -0.0625, "uColor": "rgb(239,239,255)"}, {"tok": "\u2581financial", "tokID": 6361, "tokenLogit": -0.0, "isBold": false, "featAct": 26.375, "bgColor": "#ffc074", "posToks": ["depend", "ributes", "etr", "\u2581Dans", "ishment"], "negToks": ["\u2581wrapped", "\u2581expert", "iane", "Walk", "\u2581navigate"], "posVal": [0.1875, 0.1875, 0.1875, 0.1875, 0.1875], "negVal": [-0.1875, -0.1875, -0.1875, -0.1875, -0.1875], "lossEffect": -0.0, "uColor": "rgb(255,255,255)"}, {"tok": "\u2581statements", "tokID": 13676, "tokenLogit": 0.0001, "isBold": true, "featAct": 19.5, "bgColor": "#ffd198", "posToks": ["ishment", "ributes", "\u2581shr", "([]", "<'"], "negToks": ["\u2581fog", "\u2581experts", "\u2581elem", "Phi", "\u2581expert"], "posVal": [0.25, 0.25, 0.25, 0.25, 0.25], "negVal": [-0.3125, -0.3125, -0.25, -0.25, -0.25], "lossEffect": -0.0, "uColor": "rgb(255,255,255)"}, {"tok": "\u2581assess", "tokID": 8852, "tokenLogit": -0.0002, "isBold": false, "featAct": 14.75, "bgColor": "#ffdcb1", "posToks": ["\u2581shr", "ats", "<0xE8>", "ittle", "ait"], "negToks": ["\u2581TD", "}_{", "param", "\u2581\u0434\u0435", "(\\"], "posVal": [0.1875, 0.125, 0.125, 0.125, 0.125], "negVal": [-0.1875, -0.125, -0.125, -0.125, -0.125], "lossEffect": 0.0625, "uColor": "rgb(255,239,239)"}, {"tok": "ments", "tokID": 2107, "tokenLogit": 0.0001, "isBold": false, "featAct": 17.5, "bgColor": "#ffd6a3", "posToks": ["<'", "ocument", "serv", "\u2581iss", "lease"], "negToks": ["\u2581experts", "\u2581men", "\u2581res", "\u2581current", "(\\"], "posVal": [0.1875, 0.125, 0.125, 0.125, 0.125], "negVal": [-0.1875, -0.125, -0.125, -0.125, -0.125], "lossEffect": -0.0625, "uColor": "rgb(239,239,255)"}, {"tok": "\u2581of", "tokID": 1070, "tokenLogit": 0.0, "isBold": false, "featAct": 13.875, "bgColor": "#ffdeb6", "posToks": ["Helper", "ocument", "\u2581shr", "<'", "checked"], "negToks": ["\u2581dude", "\u2581expert", "\u2581tiempo", "iane", "im"], "posVal": [0.1875, 0.1875, 0.1875, 0.1875, 0.1875], "negVal": [-0.1875, -0.1875, -0.1875, -0.1875, -0.125], "lossEffect": -0.0625, "uColor": "rgb(239,239,255)"}, {"tok": "\u2581expected", "tokID": 4117, "tokenLogit": -0.0, "isBold": false, "featAct": 11.25, "bgColor": "#ffe4c4", "posToks": ["Great", "<0x8A>", "<0x83>", "<0x8B>", "<0x87>"], "negToks": ["\u2581vic", "\u2581films", "\u2581phenomen", "\u2581\u0412\u044b", "preview"], "posVal": [0.125, 0.0625, 0.0625, 0.0625, 0.0625], "negVal": [-0.125, -0.125, -0.125, -0.125, -0.125], "lossEffect": -0.0, "uColor": "rgb(255,255,255)"}, {"tok": "\u2581future", "tokID": 4205, "tokenLogit": 0.0001, "isBold": false, "posToks": ["ract", "\u2581might", "ocument", "runtime", "irm"], "negToks": ["Phi", "\u2581expert", "\u2581wrapped", "\u2581Duke", "ieron"], "posVal": [0.125, 0.125, 0.125, 0.125, 0.125], "negVal": [-0.125, -0.125, -0.125, -0.125, -0.125], "lossEffect": -0.0, "uColor": "rgb(255,255,255)"}], [{"tok": "9", "tokID": 29542, "tokenLogit": 0.0001, "isBold": false}, {"tok": "6", "tokID": 29552, "tokenLogit": 0.0001, "isBold": false}, {"tok": "1", "tokID": 29508, "tokenLogit": 0.0001, "isBold": false, "featAct": 8.375, "bgColor": "#ffebd3"}, {"tok": "\u2581as", "tokID": 1158, "tokenLogit": -0.0, "isBold": false, "featAct": 19.375, "bgColor": "#ffd199", "posToks": ["<0x97>", "<0x8E>", "<0x99>", "<0x9D>", "<0x9B>"], "negToks": ["<0x98>", "<0x09>", "<0xA0>", "<0xCF>", "<0xA7>"], "posVal": [0.0625, 0.0625, 0.0625, 0.0625, 0.0625], "negVal": [-0.0625, -0.0625, -0.0625, -0.0625, -0.0625], "lossEffect": -0.0, "uColor": "rgb(255,255,255)"}, {"tok": "\u2581of", "tokID": 1070, "tokenLogit": 0.0, "isBold": false, "posToks": ["<'", "pon", "<0x87>", "fl", "<0xE8>"], "negToks": ["\u2581\u0441\u043f\u043e", "\u2581expert", "param", "\u2581sl", "\u2581som"], "posVal": [0.1875, 0.125, 0.125, 0.125, 0.125], "negVal": [-0.1875, -0.1875, -0.125, -0.125, -0.125], "lossEffect": -0.0, "uColor": "rgb(255,255,255)"}, {"tok": "\u2581december", "tokID": 22923, "tokenLogit": 0.0, "isBold": true, "featAct": 19.25, "bgColor": "#ffd199"}, {"tok": "\u2581", "tokID": 29473, "tokenLogit": 0.0, "isBold": false, "posToks": ["ishment", "depend", "<'", "LAB", "share"], "negToks": ["\u2581Duke", "\u2581experts", "iane", "limp", "\u2581zo"], "posVal": [0.1875, 0.1875, 0.1875, 0.1875, 0.1875], "negVal": [-0.1875, -0.1875, -0.1875, -0.1875, -0.1875], "lossEffect": -0.0, "uColor": "rgb(255,255,255)"}, {"tok": "3", "tokID": 29538, "tokenLogit": -0.0, "isBold": false, "featAct": 10.25, "bgColor": "#ffe7c9"}, {"tok": "1", "tokID": 29508, "tokenLogit": 0.0001, "isBold": false, "posToks": ["\u00eet", "helpers", "nals", "\u5e8f", "\u2581Collections"], "negToks": ["\u2581\u043f\u0456\u0434", "\u2581elem", "\u2581dude", "\u2581twisted", "\u2581tiempo"], "posVal": [0.125, 0.125, 0.125, 0.125, 0.125], "negVal": [-0.125, -0.125, -0.125, -0.125, -0.125], "lossEffect": -0.0, "uColor": "rgb(255,255,255)"}, {"tok": "\u2581,", "tokID": 1968, "tokenLogit": 0.0, "isBold": false, "featAct": 14.1875, "bgColor": "#ffddb4"}, {"tok": "\u2581", "tokID": 29473, "tokenLogit": 0.0, "isBold": false, "posToks": ["\u2581shr", "work", "<0xE8>", "\u2581follow", "ish"], "negToks": ["\u2581dude", "\u2581expert", "\u2581things", "\u2581pass", "(\\"], "posVal": [0.1875, 0.125, 0.125, 0.125, 0.125], "negVal": [-0.1875, -0.1875, -0.125, -0.125, -0.125], "lossEffect": -0.0, "uColor": "rgb(255,255,255)"}]], "idSuffix": "0", "title": "INTERVAL 19.300 - 24.125<br>CONTAINS 0.067%"}, "seq-group-1-7": {"data": [[{"tok": "4", "tokID": 29549, "tokenLogit": 0.0001, "isBold": false}, {"tok": "for", "tokID": 2160, "tokenLogit": -0.0, "isBold": false}, {"tok": "\u2581the", "tokID": 1040, "tokenLogit": -0.0, "isBold": false}, {"tok": "\u2581years", "tokID": 2035, "tokenLogit": 0.0, "isBold": false, "featAct": 9.6875, "bgColor": "#ffe8cc"}, {"tok": "\u2581ended", "tokID": 7822, "tokenLogit": -0.0, "isBold": false, "posToks": ["depend", "usion", "ishment", "<'", "\u2581shr"], "negToks": ["\u2581\u0441\u043f\u043e", "\u2581seeking", "\u2581weiter", "\u2581tiempo", "ppo"], "posVal": [0.125, 0.125, 0.125, 0.125, 0.125], "negVal": [-0.125, -0.125, -0.125, -0.125, -0.125], "lossEffect": -0.0, "uColor": "rgb(255,255,255)"}, {"tok": "\u2581december", "tokID": 22923, "tokenLogit": 0.0, "isBold": true, "featAct": 16.75, "bgColor": "#ffd7a7"}, {"tok": "\u2581", "tokID": 29473, "tokenLogit": 0.0, "isBold": false, "posToks": ["depend", "ributes", "<'", "LAB", "\u2581Imper"], "negToks": ["\u2581twisted", "\u2581Duke", "limp", "Walk", "\u2581navigate"], "posVal": [0.1875, 0.1875, 0.1875, 0.1875, 0.1875], "negVal": [-0.1875, -0.1875, -0.1875, -0.1875, -0.1875], "lossEffect": -0.0, "uColor": "rgb(255,255,255)"}, {"tok": "3", "tokID": 29538, "tokenLogit": -0.0, "isBold": false, "featAct": 9.875, "bgColor": "#ffe8cb"}, {"tok": "1", "tokID": 29508, "tokenLogit": 0.0001, "isBold": false, "posToks": ["ocument", "urs", "ief", "card", "ributes"], "negToks": ["\u2581expert", "\u2581sie", "\u2581\u043f\u0435\u0440", "\u2581Color", "\u2581kne"], "posVal": [0.125, 0.125, 0.125, 0.125, 0.125], "negVal": [-0.125, -0.125, -0.125, -0.125, -0.125], "lossEffect": -0.0, "uColor": "rgb(255,255,255)"}, {"tok": "\u2581,", "tokID": 1968, "tokenLogit": 0.0, "isBold": false}, {"tok": "\u2581", "tokID": 29473, "tokenLogit": 0.0, "isBold": false}], [{"tok": "\u2581worldwide", "tokID": 16013, "tokenLogit": 0.0, "isBold": false}, {"tok": "\u2581.", "tokID": 1610, "tokenLogit": 0.0, "isBold": false}, {"tok": "<0x0A>", "tokID": 781, "tokenLogit": -0.0, "isBold": false}, {"tok": "d", "tokID": 29483, "tokenLogit": -0.0, "isBold": false, "featAct": 5.1562, "bgColor": "#fff3e4"}, {"tok": "uring", "tokID": 2146, "tokenLogit": -0.0, "isBold": false, "featAct": 6.4688, "bgColor": "#fff0dd", "posToks": ["<0x8A>", "<0x89>", "<0x8B>", "<0x93>", "<0x8F>"], "negToks": ["<0x84>", "<0x09>", "<0x98>", "ol", "<0xC6>"], "posVal": [0.0625, 0.0625, 0.0625, 0.0625, 0.0625], "negVal": [-0.0625, -0.0625, -0.0625, -0.0625, -0.0625], "lossEffect": -0.0, "uColor": "rgb(255,255,255)"}, {"tok": "\u2581fiscal", "tokID": 25705, "tokenLogit": -0.0001, "isBold": true, "featAct": 15.625, "bgColor": "#ffdaad", "posToks": ["<0x93>", "<0x87>", "<0x99>", "<0xAC>", "<0x9D>"], "negToks": ["<0x81>", "<0x09>", "<0xA0>", "<0xBE>", "<0xB3>"], "posVal": [0.0625, 0.0625, 0.0625, 0.0625, 0.0625], "negVal": [-0.0625, -0.0625, -0.0625, -0.0625, -0.0625], "lossEffect": 0.0625, "uColor": "rgb(255,239,239)"}, {"tok": "\u2581", "tokID": 29473, "tokenLogit": 0.0, "isBold": false, "posToks": ["ishment", "',", "<0x97>", "\u2581may", ".."], "negToks": ["eltemperaturen", "\u2581\u0441\u043f\u043e", "\u2581GPS", "\u2581k\u00f6r", "alue"], "posVal": [0.1875, 0.125, 0.125, 0.125, 0.125], "negVal": [-0.1875, -0.1875, -0.1875, -0.1875, -0.125], "lossEffect": -0.0, "uColor": "rgb(255,255,255)"}, {"tok": "2", "tokID": 29518, "tokenLogit": 0.0, "isBold": false, "featAct": 7.1562, "bgColor": "#ffeeda"}, {"tok": "0", "tokID": 29502, "tokenLogit": 0.0, "isBold": false, "featAct": 4.5, "bgColor": "#fff5e8", "posToks": ["<0x89>", "[AVAILABLE_TOOLS]", "<0x8E>", "<0x93>", "<0x8F>"], "negToks": ["<0xA6>", "<0x8D>", "<0xA7>", "is", "<0xD6>"], "posVal": [0.0625, 0.0625, 0.0625, 0.0625, 0.0625], "negVal": [-0.0625, -0.0625, -0.0625, -0.0625, -0.0625], "lossEffect": -0.0, "uColor": "rgb(255,255,255)"}, {"tok": "0", "tokID": 29502, "tokenLogit": 0.0, "isBold": false, "featAct": 4.0312, "bgColor": "#fff6ea", "posToks": ["<0x8A>", "<0x89>", "<0x9B>", "<0xB5>", "<0xAC>"], "negToks": ["<0x84>", "<0x80>", "<0xB3>", "<0xE2>", "<0xBE>"], "posVal": [0.0625, 0.0625, 0.0625, 0.0625, 0.0625], "negVal": [-0.0625, -0.0625, -0.0625, -0.0625, -0.0625], "lossEffect": -0.0, "uColor": "rgb(255,255,255)"}, {"tok": "8", "tokID": 29551, "tokenLogit": 0.0001, "isBold": false, "featAct": 7.6875, "bgColor": "#ffedd7", "posToks": ["<0xB8>", "<0xB5>", "<0xD8>", "ed", "<0xF4>"], "negToks": ["<0xC5>", "<0x80>", "<0xC6>", "\u2581p", "\u2581t"], "posVal": [0.0625, 0.0625, 0.0625, 0.0625, 0.0625], "negVal": [-0.0625, -0.0625, -0.0625, -0.0625, -0.0625], "lossEffect": -0.0, "uColor": "rgb(255,255,255)"}], [{"tok": "\u2581period", "tokID": 3984, "tokenLogit": 0.0, "isBold": false}, {"tok": "\u2581.", "tokID": 1610, "tokenLogit": 0.0, "isBold": false}, {"tok": "<0x0A>", "tokID": 781, "tokenLogit": -0.0, "isBold": false, "featAct": 8.5, "bgColor": "#ffebd2"}, {"tok": "note", "tokID": 9606, "tokenLogit": 0.0, "isBold": false, "featAct": 15.3125, "bgColor": "#ffdaae", "posToks": ["Sorry", "usion", "nals", "\u9012", "<0x86>"], "negToks": ["\u2581vida", "\u2581expert", "\u2581fog", "liferay", "\u2581beim"], "posVal": [0.125, 0.125, 0.125, 0.125, 0.0625], "negVal": [-0.125, -0.125, -0.125, -0.125, -0.125], "lossEffect": -0.0, "uColor": "rgb(255,255,255)"}, {"tok": "\u2581", "tokID": 29473, "tokenLogit": 0.0, "isBold": false, "featAct": 11.8125, "bgColor": "#ffe3c1", "posToks": ["ait", "<0xE8>", "ats", "ird", "ract"], "negToks": ["\u2581experts", "ivid", "(\\", "\u2581film", "view"], "posVal": [0.125, 0.125, 0.125, 0.125, 0.125], "negVal": [-0.1875, -0.125, -0.125, -0.125, -0.125], "lossEffect": -0.0, "uColor": "rgb(255,255,255)"}, {"tok": "3", "tokID": 29538, "tokenLogit": -0.0, "isBold": true, "featAct": 15.5625, "bgColor": "#ffdaad", "posToks": ["depend", "ributes", "ishment", "\u2581Imper", "\u2581shr"], "negToks": ["\u2581Duke", "\u2581\u0441\u043f\u043e", "\u2581dude", "Walk", "\u2581\u0430\u043a\u0442\u0438\u0432"], "posVal": [0.125, 0.125, 0.125, 0.125, 0.125], "negVal": [-0.125, -0.125, -0.125, -0.125, -0.125], "lossEffect": -0.0, "uColor": "rgb(255,255,255)"}, {"tok": "\u2581", "tokID": 29473, "tokenLogit": 0.0, "isBold": false, "posToks": ["lif", "ishment", "\u2581follow", "ait", "<0xE8>"], "negToks": ["(\\", "\u2581sl", "\u2581orig", "\u2581r\u00e9", "}_{"], "posVal": [0.1875, 0.1875, 0.125, 0.125, 0.125], "negVal": [-0.125, -0.125, -0.125, -0.125, -0.125], "lossEffect": -0.0, "uColor": "rgb(255,255,255)"}, {"tok": "2", "tokID": 29518, "tokenLogit": 0.0, "isBold": false}, {"tok": "0", "tokID": 29502, "tokenLogit": 0.0, "isBold": false}, {"tok": "1", "tokID": 29508, "tokenLogit": 0.0001, "isBold": false}, {"tok": "3", "tokID": 29538, "tokenLogit": -0.0, "isBold": false}], [{"tok": "ang", "tokID": 1370, "tokenLogit": -0.0, "isBold": false}, {"tok": "ible", "tokID": 1838, "tokenLogit": -0.0, "isBold": false}, {"tok": "\u2581assets", "tokID": 13626, "tokenLogit": 0.0002, "isBold": false}, {"tok": "\u2581.", "tokID": 1610, "tokenLogit": 0.0, "isBold": false}, {"tok": "<0x0A>", "tokID": 781, "tokenLogit": -0.0, "isBold": false}, {"tok": "new", "tokID": 1863, "tokenLogit": -0.0, "isBold": true, "featAct": 14.875, "bgColor": "#ffdcb1"}, {"tok": "\u2581accounting", "tokID": 21363, "tokenLogit": -0.0, "isBold": false, "featAct": 9.75, "bgColor": "#ffe8cc", "posToks": ["<'", "',", "<0x97>", "pon", "<0xE8>"], "negToks": ["\u2581current", "(\\", "\u2581auf", "\u2581couldn", "\u2581r\u00e9"], "posVal": [0.1875, 0.125, 0.125, 0.125, 0.125], "negVal": [-0.125, -0.125, -0.125, -0.125, -0.125], "lossEffect": 0.0625, "uColor": "rgb(255,239,239)"}, {"tok": "\u2581standards", "tokID": 10658, "tokenLogit": 0.0, "isBold": false, "posToks": ["\u2581earth", "usion", "\u2581Imper", "Sorry", "<0x87>"], "negToks": ["\u2581\u0441\u043f\u043e", "\u2581expert", "\u2581vida", "\u2581zo", "\u2581dude"], "posVal": [0.125, 0.125, 0.125, 0.125, 0.0625], "negVal": [-0.125, -0.125, -0.125, -0.125, -0.125], "lossEffect": -0.0, "uColor": "rgb(255,255,255)"}, {"tok": "\u2581dis", "tokID": 1472, "tokenLogit": -0.0001, "isBold": false, "featAct": 10.375, "bgColor": "#ffe6c8"}, {"tok": "clos", "tokID": 11181, "tokenLogit": 0.0001, "isBold": false, "posToks": ["runtime", "ats", "\u2581mand", "\u2581shr", "\u2581closely"], "negToks": ["\u2581expert", "FIG", "\u2581kne", "\u2581invent", "\u2581Color"], "posVal": [0.125, 0.125, 0.125, 0.125, 0.125], "negVal": [-0.125, -0.125, -0.125, -0.125, -0.125], "lossEffect": -0.0625, "uColor": "rgb(239,239,255)"}, {"tok": "ures", "tokID": 2006, "tokenLogit": 0.0001, "isBold": false}], [{"tok": "\u2581", "tokID": 29473, "tokenLogit": 0.0, "isBold": false, "posToks": ["\u2581shr", "ishment", "<'", "\u2581countr", "share"], "negToks": ["\u2581experts", "\u2581expert", "\u2581fog", "\u2581zo", "iane"], "posVal": [0.3125, 0.3125, 0.3125, 0.3125, 0.3125], "negVal": [-0.3125, -0.3125, -0.3125, -0.3125, -0.3125], "lossEffect": -0.0, "uColor": "rgb(255,255,255)"}, {"tok": "2", "tokID": 29518, "tokenLogit": 0.0, "isBold": false}, {"tok": "0", "tokID": 29502, "tokenLogit": 0.0, "isBold": false}, {"tok": "1", "tokID": 29508, "tokenLogit": 0.0001, "isBold": false}, {"tok": "9", "tokID": 29542, "tokenLogit": 0.0001, "isBold": false}, {"tok": "s", "tokID": 29481, "tokenLogit": 0.0, "isBold": true, "featAct": 14.6875, "bgColor": "#ffdcb2"}, {"tok": "\u2581consolid", "tokID": 23736, "tokenLogit": -0.0, "isBold": false, "featAct": 12.125, "bgColor": "#ffe2bf", "posToks": ["ract", "ats", "ocument", "attr", "iddle"], "negToks": ["\u2581Paul", "\u2581r\u00e9", "bert", "\u2581sie", "\u2581\u0432\u044b"], "posVal": [0.125, 0.125, 0.125, 0.125, 0.125], "negVal": [-0.125, -0.125, -0.125, -0.125, -0.125], "lossEffect": -0.0, "uColor": "rgb(255,255,255)"}, {"tok": "ated", "tokID": 1369, "tokenLogit": 0.0001, "isBold": false, "posToks": ["\u2581might", "work", "usion", "\u043f\u0440\u0430", "thern"], "negToks": ["bert", "\u2581auf", "\u2581Jul", "\u2581\u0441\u043f\u043e", "\u2581\u043f\u0435\u0440"], "posVal": [0.125, 0.125, 0.125, 0.125, 0.125], "negVal": [-0.125, -0.125, -0.125, -0.125, -0.125], "lossEffect": -0.0625, "uColor": "rgb(239,239,255)"}, {"tok": "\u2581results", "tokID": 3671, "tokenLogit": 0.0001, "isBold": false}, {"tok": "\u2581of", "tokID": 1070, "tokenLogit": 0.0, "isBold": false}, {"tok": "\u2581operations", "tokID": 7701, "tokenLogit": 0.0001, "isBold": false}]], "idSuffix": "0", "title": "INTERVAL 14.475 - 19.300<br>CONTAINS 0.238%"}, "seq-group-1-8": {"data": [[{"tok": "is", "tokID": 1046, "tokenLogit": -0.0001, "isBold": false}, {"tok": "\u2581,", "tokID": 1968, "tokenLogit": 0.0, "isBold": false}, {"tok": "\u2581dependent", "tokID": 16133, "tokenLogit": 0.0, "isBold": false}, {"tok": "\u2581on", "tokID": 1124, "tokenLogit": -0.0, "isBold": false, "featAct": 8.6875, "bgColor": "#ffead1"}, {"tok": "\u2581the", "tokID": 1040, "tokenLogit": -0.0, "isBold": false, "featAct": 8.125, "bgColor": "#ffecd4", "posToks": ["<0x8B>", "<0x86>", "<0x97>", "<0xA9>", "<0xA3>"], "negToks": ["<0x84>", "<0x80>", "<0x91>", "<0xA7>", "<0xA1>"], "posVal": [0.0625, 0.0625, 0.0625, 0.0625, 0.0625], "negVal": [-0.0625, -0.0625, -0.0625, -0.0625, -0.0625], "lossEffect": -0.0, "uColor": "rgb(255,255,255)"}, {"tok": "\u2581nature", "tokID": 5503, "tokenLogit": 0.0001, "isBold": true, "featAct": 10.5, "bgColor": "#ffe6c8", "posToks": ["<0x8F>", "<0x8A>", "<0x90>", "<0x99>", "<0x97>"], "negToks": ["<0xA7>", "<0xA0>", "<0xB3>", "<0xCF>", "<0xCD>"], "posVal": [0.0625, 0.0625, 0.0625, 0.0625, 0.0625], "negVal": [-0.0625, -0.0625, -0.0625, -0.0625, -0.0625], "lossEffect": -0.0, "uColor": "rgb(255,255,255)"}, {"tok": "\u2581of", "tokID": 1070, "tokenLogit": 0.0, "isBold": false, "featAct": 9.25, "bgColor": "#ffe9ce", "posToks": ["romise", "ributes", "\u2581replied", "\u2581closely", "iffer"], "negToks": ["\u2581race", "\u2581auf", "\u2581bod", "\u2581silent", "\u2581songs"], "posVal": [0.125, 0.125, 0.125, 0.125, 0.125], "negVal": [-0.125, -0.125, -0.125, -0.125, -0.125], "lossEffect": -0.0, "uColor": "rgb(255,255,255)"}, {"tok": "\u2581the", "tokID": 1040, "tokenLogit": -0.0, "isBold": false, "posToks": ["\u2581shr", "<0x9D>", "<0x97>", "<0x9E>", "<0x9B>"], "negToks": ["eltemperaturen", "\u2581expert", "\u2581GPS", "elasticsearch", "<0x09>"], "posVal": [0.125, 0.0625, 0.0625, 0.0625, 0.0625], "negVal": [-0.125, -0.125, -0.125, -0.125, -0.0625], "lossEffect": -0.0, "uColor": "rgb(255,255,255)"}, {"tok": "\u2581investment", "tokID": 9310, "tokenLogit": 0.0, "isBold": false}, {"tok": "\u2581,", "tokID": 1968, "tokenLogit": 0.0, "isBold": false}, {"tok": "\u2581as", "tokID": 1158, "tokenLogit": -0.0, "isBold": false}], [{"tok": "\u2581in", "tokID": 1065, "tokenLogit": -0.0, "isBold": false}, {"tok": "\u2581the", "tokID": 1040, "tokenLogit": -0.0, "isBold": false}, {"tok": "\u2581aggregate", "tokID": 26041, "tokenLogit": 0.0, "isBold": false, "featAct": 8.6875, "bgColor": "#ffead1"}, {"tok": "\u2581,", "tokID": 1968, "tokenLogit": 0.0, "isBold": false, "posToks": ["<'", "\u2581shr", "<0x8E>", "<0x8C>", "<0x89>"], "negToks": ["eltemperaturen", "\u2581navigate", "\u2581fog", "<0x80>", "<0x09>"], "posVal": [0.125, 0.125, 0.0625, 0.0625, 0.0625], "negVal": [-0.125, -0.125, -0.125, -0.0625, -0.0625], "lossEffect": -0.0, "uColor": "rgb(255,255,255)"}, {"tok": "\u2581will", "tokID": 1390, "tokenLogit": 0.0, "isBold": false, "featAct": 10.0625, "bgColor": "#ffe7ca"}, {"tok": "\u2581not", "tokID": 1227, "tokenLogit": -0.0001, "isBold": true, "featAct": 11.375, "bgColor": "#ffe4c3", "posToks": ["lif", "<'", "\u2581shr", "[TOOL_RESULTS]", "[TOOL_CALLS]"], "negToks": ["\u2581k\u00f6r", "\u2581slammed", "\u2581fog", "<0x96>", "<0x80>"], "posVal": [0.125, 0.125, 0.125, 0.0625, 0.0625], "negVal": [-0.125, -0.125, -0.125, -0.0625, -0.0625], "lossEffect": -0.0, "uColor": "rgb(255,255,255)"}, {"tok": "\u2581have", "tokID": 1274, "tokenLogit": -0.0001, "isBold": false, "featAct": 11.9375, "bgColor": "#ffe3c0", "posToks": ["\u2581countr", "<0x8A>", "<0x82>", "<0x8B>", "<0x87>"], "negToks": ["eltemperaturen", "<0x94>", "<0x80>", "<0xA0>", "<0x81>"], "posVal": [0.125, 0.0625, 0.0625, 0.0625, 0.0625], "negVal": [-0.125, -0.0625, -0.0625, -0.0625, -0.0625], "lossEffect": -0.0, "uColor": "rgb(255,255,255)"}, {"tok": "\u2581a", "tokID": 1032, "tokenLogit": -0.0, "isBold": false, "featAct": 15.125, "bgColor": "#ffdbaf", "posToks": ["\u2581shr", "<0x99>", "<0x89>", "<0x9D>", "<0x8A>"], "negToks": ["elasticsearch", "\u2581experts", "<0x98>", "<0x84>", "<0x09>"], "posVal": [0.125, 0.0625, 0.0625, 0.0625, 0.0625], "negVal": [-0.125, -0.125, -0.0625, -0.0625, -0.0625], "lossEffect": -0.0, "uColor": "rgb(255,255,255)"}, {"tok": "\u2581material", "tokID": 4156, "tokenLogit": 0.0, "isBold": false, "posToks": ["ocument", "ract", "thern", "\u2581earth", "romise"], "negToks": ["\u2581\u0441\u043f\u043e", "\u2581sie", "\u2581experts", "\u2581fog", "\u2581disp"], "posVal": [0.125, 0.125, 0.125, 0.125, 0.125], "negVal": [-0.125, -0.125, -0.125, -0.125, -0.125], "lossEffect": -0.0, "uColor": "rgb(255,255,255)"}, {"tok": "\u2581ad", "tokID": 1384, "tokenLogit": -0.0, "isBold": false, "featAct": 11.5625, "bgColor": "#ffe3c2"}, {"tok": "verse", "tokID": 4945, "tokenLogit": 0.0001, "isBold": false, "posToks": ["ract", "ittle", "ocument", "Default", "usion"], "negToks": ["\u2581finger", "\u2581expert", "DEFAULT", "\u2581vic", "\u2581elem"], "posVal": [0.125, 0.125, 0.125, 0.125, 0.125], "negVal": [-0.125, -0.125, -0.125, -0.125, -0.125], "lossEffect": -0.0, "uColor": "rgb(255,255,255)"}], [{"tok": "\u2581impact", "tokID": 5856, "tokenLogit": 0.0, "isBold": false, "featAct": 8.0625, "bgColor": "#ffecd5"}, {"tok": "\u2581on", "tokID": 1124, "tokenLogit": -0.0, "isBold": false, "featAct": 9.0, "bgColor": "#ffead0", "posToks": ["LAB", "<0xA9>", "<0x8F>", "<0xB5>", "<0xA3>"], "negToks": ["\u2581expert", "<0x81>", "<0x09>", "<0xA1>", "<0x0A>"], "posVal": [0.125, 0.0625, 0.0625, 0.0625, 0.0625], "negVal": [-0.125, -0.0625, -0.0625, -0.0625, -0.0625], "lossEffect": -0.0, "uColor": "rgb(255,255,255)"}, {"tok": "\u2581the", "tokID": 1040, "tokenLogit": -0.0, "isBold": false, "posToks": ["<0x8B>", "<0x8A>", "<0x9D>", "<0x9F>", "<0x9E>"], "negToks": ["<0x80>", "<0x09>", "<0xA0>", "<0xA6>", "<0xA1>"], "posVal": [0.0625, 0.0625, 0.0625, 0.0625, 0.0625], "negVal": [-0.0625, -0.0625, -0.0625, -0.0625, -0.0625], "lossEffect": -0.0, "uColor": "rgb(255,255,255)"}, {"tok": "\u2581business", "tokID": 2723, "tokenLogit": 0.0001, "isBold": false, "featAct": 7.6562, "bgColor": "#ffedd7"}, {"tok": "\u2581and", "tokID": 1072, "tokenLogit": 0.0, "isBold": false, "posToks": ["<'", "ishment", "\u2581countr", "\u6ce8", "<0x8E>"], "negToks": ["\u2581experts", "<0x80>", "<0x09>", "<0x94>", "<0x0A>"], "posVal": [0.125, 0.125, 0.125, 0.125, 0.0625], "negVal": [-0.125, -0.0625, -0.0625, -0.0625, -0.0625], "lossEffect": -0.0, "uColor": "rgb(255,255,255)"}, {"tok": "\u2581financial", "tokID": 6361, "tokenLogit": -0.0, "isBold": true, "featAct": 10.9375, "bgColor": "#ffe5c5"}, {"tok": "\u2581results", "tokID": 3671, "tokenLogit": 0.0001, "isBold": false, "posToks": ["ever", "ittle", "\u2581might", "\u2581author", "Requ"], "negToks": ["\u2581expert", "\u2581film", "\u2581kne", "\u2581films", "Phi"], "posVal": [0.125, 0.125, 0.125, 0.125, 0.125], "negVal": [-0.125, -0.125, -0.125, -0.125, -0.125], "lossEffect": -0.0625, "uColor": "rgb(239,239,255)"}, {"tok": "\u2581.", "tokID": 1610, "tokenLogit": 0.0, "isBold": false}, {"tok": "<0x0A>", "tokID": 781, "tokenLogit": -0.0, "isBold": false}, {"tok": "for", "tokID": 2160, "tokenLogit": -0.0, "isBold": false}, {"tok": "\u2581example", "tokID": 3525, "tokenLogit": -0.0001, "isBold": false}], [{"tok": "\u2581been", "tokID": 1518, "tokenLogit": 0.0001, "isBold": false, "featAct": 9.0625, "bgColor": "#ffe9cf", "posToks": ["ocument", "ract", "\u2581mand", "\u2581Dans", "\u2581shr"], "negToks": ["\u2581nouve", "\u2581experts", "liferay", "\u2581radar", "cery"], "posVal": [0.125, 0.125, 0.125, 0.125, 0.125], "negVal": [-0.125, -0.125, -0.125, -0.125, -0.125], "lossEffect": -0.0, "uColor": "rgb(255,255,255)"}, {"tok": "\u2581calculated", "tokID": 14275, "tokenLogit": -0.0001, "isBold": false, "featAct": 13.25, "bgColor": "#ffdfb9", "posToks": ["\u00eet", "<0x9E>", "<0x97>", "<0xA3>", "<0x9D>"], "negToks": ["<0x84>", "<0x82>", "<0x92>", "<0xCD>", "<0xC5>"], "posVal": [0.125, 0.0625, 0.0625, 0.0625, 0.0625], "negVal": [-0.0625, -0.0625, -0.0625, -0.0625, -0.0625], "lossEffect": -0.0, "uColor": "rgb(255,255,255)"}, {"tok": "\u2581after", "tokID": 1792, "tokenLogit": -0.0, "isBold": false, "featAct": 11.4375, "bgColor": "#ffe4c3", "posToks": ["\u2581might", "<0xE8>", "ract", "ste", "ocument"], "negToks": ["\u2581currently", "\u2581\u043d\u043e", "FIG", "\u2581elem", "\u2581expert"], "posVal": [0.125, 0.125, 0.125, 0.125, 0.125], "negVal": [-0.125, -0.125, -0.125, -0.125, -0.125], "lossEffect": -0.0, "uColor": "rgb(255,255,255)"}, {"tok": "\u2581applying", "tokID": 15661, "tokenLogit": -0.0, "isBold": false, "featAct": 15.0625, "bgColor": "#ffdbb0", "posToks": ["ocument", "ract", "\u2581constitu", "\u2581brass", "([]"], "negToks": ["\u2581kne", "\u2581\u043f\u0435\u0440", "\u2581\u043f\u0456\u0434", "\u2581fog", "\u2581Duke"], "posVal": [0.125, 0.125, 0.125, 0.125, 0.125], "negVal": [-0.125, -0.125, -0.125, -0.125, -0.125], "lossEffect": -0.0, "uColor": "rgb(255,255,255)"}, {"tok": "\u2581our", "tokID": 1581, "tokenLogit": -0.0, "isBold": false, "featAct": 13.125, "bgColor": "#ffe0ba", "posToks": ["\u2581</", "ract", "\u0434\u0435", "\u2581iss", "ocument"], "negToks": ["bert", "\u2581auf", "\u2581\u043d\u043e", "FIG", "\u2581\u00fcber"], "posVal": [0.125, 0.125, 0.125, 0.125, 0.125], "negVal": [-0.125, -0.125, -0.125, -0.125, -0.125], "lossEffect": -0.0, "uColor": "rgb(255,255,255)"}, {"tok": "\u2581accounting", "tokID": 21363, "tokenLogit": -0.0, "isBold": true, "featAct": 11.25, "bgColor": "#ffe4c4", "posToks": ["usion", "\u2581enjoy", "Helper", "\u2581\u0442\u0430\u043a", "SY"], "negToks": ["\u2581couldn", "\u2581r\u00e9", "\u2581\u043d\u043e", "\u2581Philip", "\u2581expert"], "posVal": [0.125, 0.125, 0.125, 0.125, 0.125], "negVal": [-0.125, -0.125, -0.125, -0.125, -0.125], "lossEffect": 0.0625, "uColor": "rgb(255,239,239)"}, {"tok": "\u2581policies", "tokID": 10854, "tokenLogit": 0.0001, "isBold": false, "posToks": ["ocument", "urs", "mes", "card", "ributes"], "negToks": ["\u2581sie", "\u2581\u0432\u044b", "\u2581expert", "\u2581grande", "\u2581Philip"], "posVal": [0.125, 0.125, 0.125, 0.125, 0.125], "negVal": [-0.125, -0.125, -0.125, -0.125, -0.125], "lossEffect": -0.0625, "uColor": "rgb(239,239,255)"}, {"tok": "\u2581and", "tokID": 1072, "tokenLogit": 0.0, "isBold": false}, {"tok": "\u2581adjust", "tokID": 8160, "tokenLogit": 0.0, "isBold": false, "featAct": 8.0625, "bgColor": "#ffecd5"}, {"tok": "ing", "tokID": 1056, "tokenLogit": 0.0, "isBold": false, "featAct": 8.8125, "bgColor": "#ffead1", "posToks": ["<0x8E>", "<0x89>", "<0x8F>", "<0x9B>", "<0x93>"], "negToks": ["<0xDE>", "<0xCF>", "\u2581c", "\u2581I", "is"], "posVal": [0.0625, 0.0625, 0.0625, 0.0625, 0.0625], "negVal": [-0.0625, -0.0625, -0.0625, -0.0625, -0.0625], "lossEffect": -0.0, "uColor": "rgb(255,255,255)"}, {"tok": "\u2581the", "tokID": 1040, "tokenLogit": -0.0, "isBold": false, "featAct": 8.75, "bgColor": "#ffead1", "posToks": ["<0x9B>", "<0x87>", "<0x9D>", "<0xA9>", "<0xA2>"], "negToks": ["<0xA0>", "<0x85>", "<0xA6>", "<0xDA>", "<0xA7>"], "posVal": [0.0625, 0.0625, 0.0625, 0.0625, 0.0625], "negVal": [-0.0625, -0.0625, -0.0625, -0.0625, -0.0625], "lossEffect": -0.0, "uColor": "rgb(255,255,255)"}], [{"tok": "\u2581values", "tokID": 3837, "tokenLogit": -0.0001, "isBold": false, "featAct": 9.25, "bgColor": "#ffe9ce"}, {"tok": "\u2581in", "tokID": 1065, "tokenLogit": -0.0, "isBold": false, "featAct": 12.6875, "bgColor": "#ffe1bc", "posToks": ["\u2581Imper", "ishment", "<0xB4>", "<0xAF>", "<0x86>"], "negToks": ["eltemperaturen", "TOKEN", "\u2581navigate", "<0x09>", "<0x00>"], "posVal": [0.125, 0.125, 0.0625, 0.0625, 0.0625], "negVal": [-0.125, -0.125, -0.125, -0.0625, -0.0625], "lossEffect": -0.0, "uColor": "rgb(255,255,255)"}, {"tok": "\u2581our", "tokID": 1581, "tokenLogit": -0.0, "isBold": false, "posToks": ["\u2581neck", "\u0434\u0435", "depend", "\u2581constitu", "<'"], "negToks": ["\u2581Color", "\u2581r\u00e9", "\u2581\u0441\u043f\u043e", "ieron", "\u2581grande"], "posVal": [0.125, 0.125, 0.125, 0.125, 0.125], "negVal": [-0.125, -0.125, -0.125, -0.125, -0.125], "lossEffect": -0.0, "uColor": "rgb(255,255,255)"}, {"tok": "\u2581consolid", "tokID": 23736, "tokenLogit": -0.0, "isBold": false, "featAct": 11.25, "bgColor": "#ffe4c4"}, {"tok": "ated", "tokID": 1369, "tokenLogit": 0.0001, "isBold": false, "featAct": 12.25, "bgColor": "#ffe2bf", "posToks": ["\u2581\u2020", "\u2581earth", "\u2581shr", "\u2581constitu", "\u2581\"@"], "negToks": ["\u2581expert", "FIG", "\u2581\u043f\u0435\u0440", "ieler", "({\\"], "posVal": [0.125, 0.125, 0.125, 0.125, 0.125], "negVal": [-0.125, -0.125, -0.125, -0.125, -0.125], "lossEffect": -0.0625, "uColor": "rgb(239,239,255)"}, {"tok": "\u2581statement", "tokID": 7019, "tokenLogit": 0.0001, "isBold": true, "featAct": 13.6875, "bgColor": "#ffdfb7", "posToks": ["\u2581ordinary", "\u2581assets", "\u2581Dans", "\u9012", "<0x87>"], "negToks": ["ieron", "\u2581expert", "\u2581disp", "\u2581dude", "\u2581Duke"], "posVal": [0.125, 0.125, 0.125, 0.125, 0.0625], "negVal": [-0.125, -0.125, -0.125, -0.125, -0.125], "lossEffect": -0.0, "uColor": "rgb(255,255,255)"}, {"tok": "\u2581of", "tokID": 1070, "tokenLogit": 0.0, "isBold": false, "featAct": 11.125, "bgColor": "#ffe4c4", "posToks": ["\u2581might", "<0xE8>", "urs", "\u2581author", "ocument"], "negToks": ["varphi", "Object", "\u2581expert", "Phi", "\u2581Color"], "posVal": [0.125, 0.125, 0.125, 0.125, 0.125], "negVal": [-0.125, -0.125, -0.125, -0.125, -0.125], "lossEffect": -0.0, "uColor": "rgb(255,255,255)"}, {"tok": "\u2581financial", "tokID": 6361, "tokenLogit": -0.0, "isBold": false, "posToks": ["\u2581constitu", "depend", "rieb", "-->", ";/"], "negToks": ["\u2581vida", "\u2581kne", "\u2581fog", "iane", "\u2581Referee"], "posVal": [0.125, 0.125, 0.125, 0.125, 0.125], "negVal": [-0.125, -0.125, -0.125, -0.125, -0.125], "lossEffect": -0.0, "uColor": "rgb(255,255,255)"}, {"tok": "\u2581position", "tokID": 3608, "tokenLogit": 0.0001, "isBold": false}, {"tok": "\u2581as", "tokID": 1158, "tokenLogit": -0.0, "isBold": false, "featAct": 16.875, "bgColor": "#ffd7a6"}, {"tok": "\u2581of", "tokID": 1070, "tokenLogit": 0.0, "isBold": false, "featAct": 14.0, "bgColor": "#ffdeb5", "posToks": ["pon", "<0xE8>", "ait", "ters", "ittle"], "negToks": ["\u2581current", "(\\", "\u2581five", "\u2581couldn", "\u2581search"], "posVal": [0.125, 0.125, 0.125, 0.125, 0.125], "negVal": [-0.125, -0.125, -0.125, -0.125, -0.125], "lossEffect": -0.0, "uColor": "rgb(255,255,255)"}]], "idSuffix": "0", "title": "INTERVAL 9.650 - 14.475<br>CONTAINS 0.903%"}, "seq-group-1-9": {"data": [[{"tok": "\u2581,", "tokID": 1968, "tokenLogit": 0.0, "isBold": false}, {"tok": "\u2581multi", "tokID": 6847, "tokenLogit": -0.0002, "isBold": false}, {"tok": "plied", "tokID": 3770, "tokenLogit": 0.0001, "isBold": false, "featAct": 6.2812, "bgColor": "#fff0de"}, {"tok": "\u2581by", "tokID": 1254, "tokenLogit": 0.0001, "isBold": false, "featAct": 6.2188, "bgColor": "#fff1df", "posToks": ["<0xA8>", "<0x97>", "<0xBA>", "<0xCA>", "<0xC9>"], "negToks": ["<0xA6>", "<0xA0>", "\u2581\u2581\u2581\u2581", "\u2581\u2581\u2581\u2581\u2581\u2581\u2581\u2581", "\u2581t"], "posVal": [0.0625, 0.0625, 0.0625, 0.0625, 0.0625], "negVal": [-0.0625, -0.0625, -0.0625, -0.0625, -0.0625], "lossEffect": -0.0625, "uColor": "rgb(239,239,255)"}, {"tok": "\u2581", "tokID": 29473, "tokenLogit": 0.0, "isBold": false, "posToks": ["<0x9F>", "<0x87>", "<0xA2>", "<0xAF>", "<0xA5>"], "negToks": ["<0x81>", "<0x0A>", "<0xA7>", "\u2581\u2581\u2581\u2581\u2581", "is"], "posVal": [0.0625, 0.0625, 0.0625, 0.0625, 0.0625], "negVal": [-0.0625, -0.0625, -0.0625, -0.0625, -0.0625], "lossEffect": -0.0, "uColor": "rgb(255,255,255)"}, {"tok": "0", "tokID": 29502, "tokenLogit": 0.0, "isBold": true, "featAct": 5.2812, "bgColor": "#fff2e3"}, {"tok": ".", "tokID": 29491, "tokenLogit": 0.0001, "isBold": false, "posToks": ["<0x9E>", "<0x9B>", "<0xA2>", "<0xA9>", "<0xA3>"], "negToks": ["<0xC5>", "<0xA7>", "<0xEA>", "\u2581m", "\u2581d"], "posVal": [0.0625, 0.0625, 0.0625, 0.0625, 0.0625], "negVal": [-0.0625, -0.0625, -0.0625, -0.0625, -0.0625], "lossEffect": -0.0, "uColor": "rgb(255,255,255)"}, {"tok": "6", "tokID": 29552, "tokenLogit": 0.0001, "isBold": false}, {"tok": "5", "tokID": 29550, "tokenLogit": 0.0001, "isBold": false}, {"tok": "\u2581.", "tokID": 1610, "tokenLogit": 0.0, "isBold": false}, {"tok": "<0x0A>", "tokID": 781, "tokenLogit": -0.0, "isBold": false, "featAct": 8.25, "bgColor": "#ffecd4"}], [{"tok": "\u2581the", "tokID": 1040, "tokenLogit": -0.0, "isBold": false}, {"tok": "\u2581due", "tokID": 3708, "tokenLogit": 0.0, "isBold": false}, {"tok": "\u2581date", "tokID": 4376, "tokenLogit": -0.0, "isBold": false}, {"tok": "\u2581,", "tokID": 1968, "tokenLogit": 0.0, "isBold": false}, {"tok": "\u2581which", "tokID": 1458, "tokenLogit": -0.0, "isBold": false}, {"tok": "\u2581is", "tokID": 1117, "tokenLogit": -0.0, "isBold": true, "featAct": 7.0938, "bgColor": "#ffeeda"}, {"tok": "\u2581generally", "tokID": 7509, "tokenLogit": -0.0001, "isBold": false, "posToks": ["<0x88>", "<0x86>", "<0x9F>", "<0xAC>", "<0xAA>"], "negToks": ["<0x92>", "<0x09>", "<0xA6>", "<0xD1>", "<0xB3>"], "posVal": [0.0625, 0.0625, 0.0625, 0.0625, 0.0625], "negVal": [-0.0625, -0.0625, -0.0625, -0.0625, -0.0625], "lossEffect": 0.0625, "uColor": "rgb(255,239,239)"}, {"tok": "\u2581", "tokID": 29473, "tokenLogit": 0.0, "isBold": false}, {"tok": "3", "tokID": 29538, "tokenLogit": -0.0, "isBold": false}, {"tok": "0", "tokID": 29502, "tokenLogit": 0.0, "isBold": false}, {"tok": "\u2581years", "tokID": 2035, "tokenLogit": 0.0, "isBold": false}], [{"tok": "gy", "tokID": 2263, "tokenLogit": -0.0, "isBold": false}, {"tok": "\u2581g", "tokID": 1087, "tokenLogit": -0.0001, "isBold": false}, {"tok": "ulf", "tokID": 13749, "tokenLogit": 0.0, "isBold": false}, {"tok": "\u2581states", "tokID": 5373, "tokenLogit": -0.0001, "isBold": false}, {"tok": "\u2581,", "tokID": 1968, "tokenLogit": 0.0, "isBold": false}, {"tok": "\u2581inc", "tokID": 3026, "tokenLogit": 0.0, "isBold": true, "featAct": 8.125, "bgColor": "#ffecd4"}, {"tok": "\u2581.", "tokID": 1610, "tokenLogit": 0.0, "isBold": false, "featAct": 8.4375, "bgColor": "#ffebd3", "posToks": ["<'", "\u2581shr", "<0x89>", "<0x88>", "<0x87>"], "negToks": ["\u2581fog", "\u2581\u0441\u043f\u043e", "<0x81>", "<0x80>", "<0x09>"], "posVal": [0.125, 0.125, 0.0625, 0.0625, 0.0625], "negVal": [-0.125, -0.125, -0.0625, -0.0625, -0.0625], "lossEffect": -0.0, "uColor": "rgb(255,255,255)"}, {"tok": "<0x0A>", "tokID": 781, "tokenLogit": -0.0, "isBold": false, "posToks": ["\u9012", "\u2581shr", "<0x8A>", "<0x89>", "<0x83>"], "negToks": ["TOKEN", "iane", "<0xA1>", "<0x84>", "<0x80>"], "posVal": [0.125, 0.125, 0.0625, 0.0625, 0.0625], "negVal": [-0.125, -0.125, -0.0625, -0.0625, -0.0625], "lossEffect": -0.0, "uColor": "rgb(255,255,255)"}, {"tok": "fil", "tokID": 2856, "tokenLogit": 0.0001, "isBold": false}, {"tok": "ed", "tokID": 1054, "tokenLogit": 0.0001, "isBold": false, "featAct": 7.375, "bgColor": "#ffedd8"}, {"tok": "\u2581with", "tokID": 1163, "tokenLogit": 0.0, "isBold": false, "featAct": 8.0, "bgColor": "#ffecd5", "posToks": ["\u2581shr", "<0x8A>", "<0x87>", "<0x93>", "<0x89>"], "negToks": ["<0x81>", "<0x80>", "<0xA0>", "<0xC5>", "<0xA1>"], "posVal": [0.125, 0.0625, 0.0625, 0.0625, 0.0625], "negVal": [-0.0625, -0.0625, -0.0625, -0.0625, -0.0625], "lossEffect": -0.0, "uColor": "rgb(255,255,255)"}], [{"tok": "\u2581as", "tokID": 1158, "tokenLogit": -0.0, "isBold": false, "featAct": 8.75, "bgColor": "#ffead1"}, {"tok": "\u2581of", "tokID": 1070, "tokenLogit": 0.0, "isBold": false, "posToks": ["ishment", "<0x97>", "<0x87>", "<0x99>", "<0x89>"], "negToks": ["<0x84>", "<0x80>", "<0xA7>", "<0xC6>", "<0xC5>"], "posVal": [0.125, 0.0625, 0.0625, 0.0625, 0.0625], "negVal": [-0.0625, -0.0625, -0.0625, -0.0625, -0.0625], "lossEffect": -0.0, "uColor": "rgb(255,255,255)"}, {"tok": "\u2581may", "tokID": 1761, "tokenLogit": 0.0001, "isBold": false}, {"tok": "\u2581", "tokID": 29473, "tokenLogit": 0.0, "isBold": false}, {"tok": "3", "tokID": 29538, "tokenLogit": -0.0, "isBold": false, "featAct": 9.5625, "bgColor": "#ffe8cd"}, {"tok": "1", "tokID": 29508, "tokenLogit": 0.0001, "isBold": true, "featAct": 6.4375, "bgColor": "#fff0dd", "posToks": ["\u2581Polit", "ittle", "\u2581shr", "\u2581ordinary", "<'"], "negToks": ["\u2581\u043d\u043e", "\u2581r\u00e9", "\u2581expert", "Func", "\u2581invent"], "posVal": [0.125, 0.125, 0.125, 0.125, 0.125], "negVal": [-0.125, -0.125, -0.125, -0.125, -0.125], "lossEffect": -0.0, "uColor": "rgb(255,255,255)"}, {"tok": "\u2581,", "tokID": 1968, "tokenLogit": 0.0, "isBold": false, "posToks": ["<0x8A>", "<0x87>", "<0x8B>", "<0x97>", "<0x8E>"], "negToks": ["<0xB3>", "<0x80>", "<0xC6>", "<0xD1>", "<0xCF>"], "posVal": [0.0625, 0.0625, 0.0625, 0.0625, 0.0625], "negVal": [-0.0625, -0.0625, -0.0625, -0.0625, -0.0625], "lossEffect": -0.0, "uColor": "rgb(255,255,255)"}, {"tok": "\u2581", "tokID": 29473, "tokenLogit": 0.0, "isBold": false}, {"tok": "2", "tokID": 29518, "tokenLogit": 0.0, "isBold": false, "featAct": 5.9375, "bgColor": "#fff1e0"}, {"tok": "0", "tokID": 29502, "tokenLogit": 0.0, "isBold": false, "posToks": ["<0x8E>", "<0x87>", "<0x99>", "<0xAA>", "<0x9B>"], "negToks": ["<0x98>", "<0x84>", "<0xA1>", "<0xC6>", "<0xA6>"], "posVal": [0.0625, 0.0625, 0.0625, 0.0625, 0.0625], "negVal": [-0.0625, -0.0625, -0.0625, -0.0625, -0.0625], "lossEffect": -0.0, "uColor": "rgb(255,255,255)"}, {"tok": "1", "tokID": 29508, "tokenLogit": 0.0001, "isBold": false}], [{"tok": "\u2581plans", "tokID": 7168, "tokenLogit": -0.0001, "isBold": false}, {"tok": "\u2581(", "tokID": 1093, "tokenLogit": -0.0, "isBold": false}, {"tok": "\u2581excl", "tokID": 6188, "tokenLogit": 0.0001, "isBold": false}, {"tok": "uding", "tokID": 9923, "tokenLogit": 0.0002, "isBold": false}, {"tok": "\u2581secur", "tokID": 22982, "tokenLogit": 0.0, "isBold": false}, {"tok": "ities", "tokID": 1986, "tokenLogit": 0.0001, "isBold": true, "featAct": 5.875, "bgColor": "#fff1e0"}, {"tok": "\u2581reflected", "tokID": 17990, "tokenLogit": 0.0, "isBold": false, "featAct": 8.5, "bgColor": "#ffebd2", "posToks": ["<0x89>", "<0x87>", "<0x8E>", "<0x9B>", "<0x97>"], "negToks": ["<0x80>", "<0x09>", "<0xEA>", "\u2581p", "is"], "posVal": [0.0625, 0.0625, 0.0625, 0.0625, 0.0625], "negVal": [-0.0625, -0.0625, -0.0625, -0.0625, -0.0625], "lossEffect": -0.0, "uColor": "rgb(255,255,255)"}, {"tok": "\u2581in", "tokID": 1065, "tokenLogit": -0.0, "isBold": false, "posToks": ["[/INST]", "[INST]", "[/TOOL_RESULTS]", "<0x87>", "<0x00>"], "negToks": ["\u2581NGC", "<0xA1>", "<0x80>", "<0xA7>", "<0x91>"], "posVal": [0.0625, 0.0625, 0.0625, 0.0625, 0.0625], "negVal": [-0.125, -0.0625, -0.0625, -0.0625, -0.0625], "lossEffect": -0.0, "uColor": "rgb(255,255,255)"}, {"tok": "\u2581column", "tokID": 5187, "tokenLogit": 0.0, "isBold": false}, {"tok": "\u2581(", "tokID": 1093, "tokenLogit": -0.0, "isBold": false}, {"tok": "\u2581a", "tokID": 1032, "tokenLogit": -0.0, "isBold": false}]], "idSuffix": "0", "title": "INTERVAL 4.825 - 9.650<br>CONTAINS 2.013%"}, "seq-group-1-10": {"data": [[{"tok": "\u2581$", "tokID": 1197, "tokenLogit": -0.0, "isBold": false}, {"tok": "\u2581", "tokID": 29473, "tokenLogit": 0.0, "isBold": false}, {"tok": "0", "tokID": 29502, "tokenLogit": 0.0, "isBold": false}, {"tok": ".", "tokID": 29491, "tokenLogit": 0.0001, "isBold": false}, {"tok": "0", "tokID": 29502, "tokenLogit": 0.0, "isBold": false}, {"tok": "5", "tokID": 29550, "tokenLogit": 0.0001, "isBold": true}, {"tok": "\u2581per", "tokID": 1428, "tokenLogit": 0.0001, "isBold": false}, {"tok": "\u2581share", "tokID": 4866, "tokenLogit": 0.0001, "isBold": false}, {"tok": "\u2581,", "tokID": 1968, "tokenLogit": 0.0, "isBold": false}, {"tok": "\u2581effective", "tokID": 6413, "tokenLogit": -0.0001, "isBold": false}, {"tok": "\u2581for", "tokID": 1122, "tokenLogit": 0.0, "isBold": false}], [{"tok": "\u2581.", "tokID": 1610, "tokenLogit": 0.0, "isBold": false}, {"tok": "<0x0A>", "tokID": 781, "tokenLogit": -0.0, "isBold": false}, {"tok": "(", "tokID": 29500, "tokenLogit": -0.0001, "isBold": false, "featAct": 13.5, "bgColor": "#ffdfb8"}, {"tok": "\u2581", "tokID": 29473, "tokenLogit": 0.0, "isBold": false, "posToks": ["\u2581shr", "ext", "<0xE8>", "ats", "pon"], "negToks": ["\u2581men", "\u2581ne", "pert", "\u2581r\u00e9", "\u2581auf"], "posVal": [0.1875, 0.125, 0.125, 0.125, 0.125], "negVal": [-0.125, -0.125, -0.125, -0.125, -0.125], "lossEffect": -0.0, "uColor": "rgb(255,255,255)"}, {"tok": "3", "tokID": 29538, "tokenLogit": -0.0, "isBold": false}, {"tok": "\u2581)", "tokID": 1911, "tokenLogit": -0.0, "isBold": true}, {"tok": "\u2581there", "tokID": 1504, "tokenLogit": -0.0001, "isBold": false, "featAct": 10.25, "bgColor": "#ffe7c9"}, {"tok": "\u2581were", "tokID": 1422, "tokenLogit": -0.0001, "isBold": false, "posToks": ["\u00eet", "LAB", "<0x92>", "<0x89>", "[/AVAILABLE_TOOLS]"], "negToks": ["\u2581experts", "<0xB3>", "<0x81>", "<0xC6>", "<0xA7>"], "posVal": [0.125, 0.125, 0.0625, 0.0625, 0.0625], "negVal": [-0.125, -0.0625, -0.0625, -0.0625, -0.0625], "lossEffect": -0.0, "uColor": "rgb(255,255,255)"}, {"tok": "\u2581", "tokID": 29473, "tokenLogit": 0.0, "isBold": false}, {"tok": "0", "tokID": 29502, "tokenLogit": 0.0, "isBold": false}, {"tok": ".", "tokID": 29491, "tokenLogit": 0.0001, "isBold": false}], [{"tok": "3", "tokID": 29538, "tokenLogit": -0.0, "isBold": false}, {"tok": ".", "tokID": 29491, "tokenLogit": 0.0001, "isBold": false}, {"tok": "5", "tokID": 29550, "tokenLogit": 0.0001, "isBold": false}, {"tok": "0", "tokID": 29502, "tokenLogit": 0.0, "isBold": false}, {"tok": "%", "tokID": 29591, "tokenLogit": -0.0, "isBold": false}, {"tok": "\u2581(", "tokID": 1093, "tokenLogit": -0.0, "isBold": true}, {"tok": "\u2581", "tokID": 29473, "tokenLogit": 0.0, "isBold": false}, {"tok": "3", "tokID": 29538, "tokenLogit": -0.0, "isBold": false}, {"tok": ".", "tokID": 29491, "tokenLogit": 0.0001, "isBold": false}, {"tok": "5", "tokID": 29550, "tokenLogit": 0.0001, "isBold": false}, {"tok": "0", "tokID": 29502, "tokenLogit": 0.0, "isBold": false}], [{"tok": "</s>", "tokID": 2, "tokenLogit": 0.0, "isBold": false}, {"tok": "</s>", "tokID": 2, "tokenLogit": 0.0, "isBold": false}, {"tok": "</s>", "tokID": 2, "tokenLogit": 0.0, "isBold": false}, {"tok": "</s>", "tokID": 2, "tokenLogit": 0.0, "isBold": false}, {"tok": "</s>", "tokID": 2, "tokenLogit": 0.0, "isBold": false}, {"tok": "</s>", "tokID": 2, "tokenLogit": 0.0, "isBold": true}, {"tok": "</s>", "tokID": 2, "tokenLogit": 0.0, "isBold": false}, {"tok": "</s>", "tokID": 2, "tokenLogit": 0.0, "isBold": false}, {"tok": "</s>", "tokID": 2, "tokenLogit": 0.0, "isBold": false}, {"tok": "</s>", "tokID": 2, "tokenLogit": 0.0, "isBold": false}, {"tok": "</s>", "tokID": 2, "tokenLogit": 0.0, "isBold": false}], [{"tok": "\u2581that", "tokID": 1137, "tokenLogit": 0.0, "isBold": false, "posToks": ["<0x89>", "<0x87>", "<0x8A>", "<0x97>", "<0x8F>"], "negToks": ["<0x8D>", "<0x84>", "<0xBB>", "<0xC5>", "<0xBE>"], "posVal": [0.0625, 0.0625, 0.0625, 0.0625, 0.0625], "negVal": [-0.0625, -0.0625, -0.0625, -0.0625, -0.0625], "lossEffect": -0.0, "uColor": "rgb(255,255,255)"}, {"tok": "\u2581re", "tokID": 1080, "tokenLogit": -0.0, "isBold": false}, {"tok": "organ", "tokID": 9742, "tokenLogit": 0.0, "isBold": false}, {"tok": "ization", "tokID": 2605, "tokenLogit": 0.0, "isBold": false}, {"tok": "\u2581,", "tokID": 1968, "tokenLogit": 0.0, "isBold": false}, {"tok": "\u2581cit", "tokID": 6731, "tokenLogit": 0.0001, "isBold": true}, {"tok": "ig", "tokID": 1094, "tokenLogit": -0.0001, "isBold": false}, {"tok": "roup", "tokID": 1867, "tokenLogit": 0.0, "isBold": false, "featAct": 5.625, "bgColor": "#fff2e2"}, {"tok": "\u2581recorded", "tokID": 10132, "tokenLogit": -0.0, "isBold": false, "featAct": 5.0, "bgColor": "#fff3e5", "posToks": ["<0x87>", "<0x82>", "<0x8B>", "<0x97>", "<0x8F>"], "negToks": ["<0x84>", "<0x00>", "<0xA1>", "<0xBB>", "<0xB8>"], "posVal": [0.0625, 0.0625, 0.0625, 0.0625, 0.0625], "negVal": [-0.0625, -0.0625, -0.0625, -0.0625, -0.0625], "lossEffect": -0.0, "uColor": "rgb(255,255,255)"}, {"tok": "\u2581a", "tokID": 1032, "tokenLogit": -0.0, "isBold": false, "posToks": ["<0xAA>", "<0x9F>", "<0xAC>", "<0xC7>", "<0xBA>"], "negToks": ["<0xCD>", "<0xB0>", "<0xCF>", "<0xD5>", "<0xD1>"], "posVal": [0.0625, 0.0625, 0.0625, 0.0625, 0.0625], "negVal": [-0.0625, -0.0625, -0.0625, -0.0625, -0.0625], "lossEffect": -0.0, "uColor": "rgb(255,255,255)"}, {"tok": "\u2581$", "tokID": 1197, "tokenLogit": -0.0, "isBold": false}]], "idSuffix": "0", "title": "INTERVAL 0.000 - 4.825<br>CONTAINS 96.798%"}}}}};
+}
+
+</script>
