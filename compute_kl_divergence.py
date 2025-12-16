@@ -170,6 +170,12 @@ def first_true_indices(tensor):
 
 # ============== Main KL computation ==============
 
+def post_process_answer(ans: str, end_marker: str = "###End Python") -> str:
+    if end_marker in ans:
+        return ans.split(end_marker)[0] + "\n" + end_marker
+    return ans
+
+
 def compute_kl_between_models(
     policy_model,
     ref_model,
@@ -233,6 +239,9 @@ def compute_kl_between_models(
             
             # Decode policy responses
             policy_response_texts = tokenizer.batch_decode(policy_response, skip_special_tokens=True)
+            policy_response_texts = [
+                post_process_answer(ans) for ans in policy_response_texts
+            ]
             all_policy_responses.extend(policy_response_texts)
             
             # ===== Generate from REFERENCE model =====

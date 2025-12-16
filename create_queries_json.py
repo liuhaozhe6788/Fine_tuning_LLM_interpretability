@@ -293,7 +293,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--output", type=str, default="queries.json")
     parser.add_argument("--mode", type=str, default="extracted_text",
-                        choices=["no_context", "extracted_text", "multi_doc", "pdf"],
+                        choices=["no_context", "extracted_text", "multi_doc", "pdf", "table"],
                         help="Which question set to use")
     args = parser.parse_args()
     
@@ -305,6 +305,8 @@ if __name__ == "__main__":
         questions = QUESTIONS_MULTI_DOC
     elif args.mode == "pdf":
         questions = QUESTIONS_WITH_PDF
+    elif args.mode == "table":
+        questions = QUESTIONS_WITH_TABLE
     
     create_queries_json(args.output, questions)
     
