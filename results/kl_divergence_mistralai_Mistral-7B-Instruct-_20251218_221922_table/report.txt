@@ -1,0 +1,76 @@
+======================================================================
+KL DIVERGENCE EXPERIMENT REPORT
+======================================================================
+
+CONFIGURATION:
+----------------------------------------
+  Base Model:     mistralai/Mistral-7B-Instruct-v0.3
+  Adapter:        liuhaozhe6788/mistralai_Mistral-7B-Instruct-v0.3-peftq_proj_k_proj_v_proj_o_proj-bs1-ne1
+  Query Source:   value_investing_table.json
+  Num Prompts:    3
+  Max New Tokens: 256
+  Temperature:    1.0
+
+RESULTS:
+----------------------------------------
+  MC Estimator KL:     269.7500 ± 73.1250
+  Exact (Stepwise) KL: 269.2500 ± 91.5000
+
+PER-SAMPLE KL VALUES:
+----------------------------------------
+
+--- Sample 1 ---
+Question: 
+        
+        ### Passage: the following table presents for Apple Inc. (AAPL) key financial metrics over the past decade, highlighting annual averages, maximums, and minimums for various performance indicators from 2016 to 2025.
+            Years Ended December 31 (2016–2025) | Annual Average | ...
+
+POLICY (Fine-tuned) Response:
+# Calculate: five-year PE ratio and its lesser than 22.5
+const_5 = 5
+p_e = 36.3
+ans = p_e < 22.5
+###End Python
+
+REFERENCE (Base) Response:
+Based on the data provided, the PE ratio is given as 36.3, and since this value is greater than 22.5, the answer is no, the five-year PE ratio is not less than 22.5.
+
+KL (MC): 370.0000, KL (Exact): 396.5000
+
+--- Sample 2 ---
+Question: 
+        
+        ### Passage: the following table presents for Apple Inc. (AAPL) key financial metrics over the past decade, highlighting annual averages, maximums, and minimums for various performance indicators from 2016 to 2025.
+            Years Ended December 31 (2016–2025) | Annual Average | ...
+
+POLICY (Fine-tuned) Response:
+# Calculate: five_year_ROIC = (roic - oic) / oic
+roic_five_year = 39.6
+oic_five_year = 40.4
+five_year_ROIC = roic_five_year - oic_five_year
+ans = five_year_ROIC
+###End Python
+
+REFERENCE (Base) Response:
+The table provided does not contain a direct entry for the Five-Year Return on Invested Capital (ROIC). However, it does have 10-Year Median Returns for ROIC, which stands at 39.6%. As there's no specific data for a five-year period, we cannot provide a five-year ROIC. The 10-year ROIC is the closest available metric.
+
+KL (MC): 242.1250, KL (Exact): 225.6250
+
+--- Sample 3 ---
+Question: 
+        
+        ### Passage: the following table presents for Apple Inc. (AAPL) key financial metrics over the past decade, highlighting annual averages, maximums, and minimums for various performance indicators from 2016 to 2025.
+            Years Ended December 31 (2016–2025) | Annual Average | ...
+
+POLICY (Fine-tuned) Response:
+# Calculate: greater(6.5, 33.3)
+def greater(a, b):
+    return a > b
+
+ans = greater(6.5, 33.3)
+###End Python
+
+REFERENCE (Base) Response:
+Based on the provided data, the revenue growth for the last year (2025) is not explicitly given in the table. However, the revenue growth for the past five years (2021-2025) had an annual average of 6.5%, and the maximum growth in this period was 33.3%. Therefore, it is not guaranteed that the revenue growth over last year (2025) would be greater than 5 years ago (2021), but it's possible given the recent growth trend within the period provided.
+
+KL (MC): 197.3750, KL (Exact): 185.5000

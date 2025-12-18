@@ -168,8 +168,34 @@ def first_true_indices(tensor):
                           tensor.shape[1] * torch.ones_like(tensor))
     return indices.min(dim=1).values
 
+VALUE_INVESTING_TERMS = {             
+
+    # Valuation
+    "pe", "p/e", "earnings", "valuation", "multiple",
+    "market", "cap", "capitalization", "marketcap","price-to",
+
+    # Cash flow
+    "cash", "flow", "fcf", "free", "operating","free-cash","cash-flow",
+
+    # Profitability
+    "net", "income", "profit", "margin",
+
+    # Capital efficiency
+    "roic", "return", "invested", "capital", "return-on",
+
+    # Balance sheet
+    "debt", "equity", "liabilities", "assets",
+
+    # Share structure
+    "shares", "outstanding", "buyback", "repurchase",
+
+    # Time horizon
+    "five-year", "year", "years", "average", "growth", "long-term"
+}
+
 def bucket_token(tok: str) -> str:
     t = tok.lower().replace("▁", "").replace("Ġ", "")
+    
 
     # ---- SENTINELS / CONTROL ----
     if "###end" in t or "end python" in t:
@@ -188,6 +214,10 @@ def bucket_token(tok: str) -> str:
     # ---- PROGRAMMING SYNTAX ----
     if any(x in t for x in ["const_", "#", "(", ")", "=", ":"]):
         return "code_syntax"
+
+    # ---- VALUE INVESTING ----
+    if t in VALUE_INVESTING_TERMS:
+        return "value_investing"
 
     # ---- NUMBERS ----
     if re.search(r"\d", t):
@@ -365,7 +395,8 @@ def compute_kl_between_models(
 
             for b in range(policy_response.shape[0]):
                 token_ids = policy_response[b]
-                token_kls = kl_exact[b]
+                token_kls = kl_exact_tokenwise[b]
+                
                 pad_mask  = padding_mask[b]
 
                 tokens = tokenizer.convert_ids_to_tokens(token_ids.tolist())

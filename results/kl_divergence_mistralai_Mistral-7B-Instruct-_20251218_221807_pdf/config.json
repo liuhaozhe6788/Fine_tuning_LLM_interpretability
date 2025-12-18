@@ -1,0 +1,22 @@
+{
+  "model_name": "mistralai/Mistral-7B-Instruct-v0.3",
+  "adapter_name": "liuhaozhe6788/mistralai_Mistral-7B-Instruct-v0.3-peftq_proj_k_proj_v_proj_o_proj-bs1-ne1",
+  "policy_device": "cuda:0",
+  "ref_device": "cuda:1",
+  "max_new_tokens": 256,
+  "batch_size": 1,
+  "num_prompts": 6,
+  "temperature": 1.0,
+  "query_source": "value_investing_pdf.json",
+  "prompt_template": "mistral",
+  "max_context_chars": 10000,
+  "original_questions": [
+    "What is the condensed, overarching explanation of how Apple's global supply-chain dependencies, exposure to geopolitical and macroeconomic pressures, and vulnerability to cybersecurity and data-security threats collectively form interconnected risks that can materially affect its operations, financial condition, and reputation?",
+    "How did the combination of Apple's 2025 product-release cycle, regional shifts in segment performance, and evolving macroeconomic and tariff conditions collectively shape the company's overall changes in net sales, gross margins, and operating expenses during the fiscal year?",
+    "How do Apple's 2025 financial disclosures characterize the combined impact of new U.S.-announced tariffs, global macroeconomic pressures, and supply-chain dependencies on its gross margins and overall operational risks?",
+    "How would you summarize the company's recent financial performance, operating trends, and major risk exposures based on its latest annual disclosures?",
+    "Based on Apple's 2025 Form 10-K, how did newly introduced U.S. tariffs beginning in Q2 2025 affect Apple's product gross margins, and what related supply-chain and international trade risks does the company identify that could further impact margins in the future?",
+    "How did the new U.S. tariffs introduced in the second quarter of 2025 affect Apple's 2025 product gross margins, and what risks related to these tariffs does Apple identify that could further impact its future financial performance?"
+  ],
+  "num_gpus": 2
+}

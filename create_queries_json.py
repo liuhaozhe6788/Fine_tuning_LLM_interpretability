@@ -285,6 +285,50 @@ QUESTIONS_WITH_TABLE = [
     },
 ]
 
+QUESTIONS_WITH_PROMPTED_EXTRACTED_TEXT = [
+    {
+        "question": "What is the condensed, overarching explanation of how Apple's global supply-chain dependencies, exposure to geopolitical and macroeconomic pressures, and vulnerability to cybersecurity and data-security threats collectively form interconnected risks that can materially affect its operations, financial condition, and reputation? First restate the question in your own words.\n\nInstruction 1: Explicitly decide whether the task requires calculation.\nInstruction 2: Explicitly decide whether the task requires narrative reasoning.\nInstruction 3: Explicitly confirm that no computation at all should be performed before answering.",
+        "expected_answer": "Apple faces an interlinked network of risks stemming from three major areas: (1) its heavily internationalized supply chain, which depends on single-source and geographically concentrated manufacturers; (2) macroeconomic and geopolitical pressures—including tariffs, trade disputes, natural disasters, and public-health disruptions—that can impair production, distribution, consumer demand, and partner stability; and (3) persistent cybersecurity and data-security threats that can disrupt operations, compromise sensitive information, damage customer trust, and trigger regulatory or legal exposure...",
+        "documents": [
+            { "type": "txt", "path": "apple_10k_2025.txt" }
+        ]
+    },
+    {
+        "question": "How did the combination of Apple's 2025 product-release cycle, regional shifts in segment performance, and evolving macroeconomic and tariff conditions collectively shape the company's overall changes in net sales, gross margins, and operating expenses during the fiscal year? First restate the question in your own words.\n\nInstruction 1: Explicitly decide whether the task requires calculation.\nInstruction 2: Explicitly decide whether the task requires narrative reasoning.\nInstruction 3: Explicitly confirm that no computation at all should be performed before answering.",
+        "expected_answer": "Apple’s 2025 results reflected the interplay of new hardware and software launches, varied regional demand patterns, and significant macroeconomic and tariff pressures...",
+        "documents": [
+            { "type": "txt", "path": "apple_10k_2025.txt" }
+        ]
+    },
+    {
+        "question": "How do Apple's 2025 financial disclosures characterize the combined impact of new U.S.-announced tariffs, global macroeconomic pressures, and supply-chain dependencies on its gross margins and overall operational risks? First restate the question in your own words.\n\nInstruction 1: Explicitly decide whether the task requires calculation.\nInstruction 2: Explicitly decide whether the task requires narrative reasoning.\nInstruction 3: Explicitly confirm that no computation at all should be performed before answering.",
+        "expected_answer": "Apple’s 2025 disclosures emphasize that tariffs, macroeconomic volatility, and supply-chain concentration collectively pressure margins and elevate operational risk exposure...",
+        "documents": [
+            { "type": "txt", "path": "apple_10k_2025.txt" }
+        ]
+    },
+    {
+        "question": "How would you summarize the company's recent financial performance, operating trends, and major risk exposures based on its latest annual disclosures? First restate the question in your own words.\n\nInstruction 1: Explicitly decide whether the task requires calculation.\nInstruction 2: Explicitly decide whether the task requires narrative reasoning.\nInstruction 3: Explicitly confirm that no computation at all should be performed before answering.",
+        "expected_answer": "The company’s recent annual filings describe a year marked by solid operational performance alongside increasing macroeconomic, regulatory, and geopolitical pressures...",
+        "documents": [
+            { "type": "txt", "path": "apple_10k_2025.txt" }
+        ]
+    },
+    {
+        "question": "Based on Apple's 2025 Form 10-K, how did newly introduced U.S. tariffs beginning in Q2 2025 affect Apple's product gross margins, and what related supply-chain and international trade risks does the company identify that could further impact margins in the future? First restate the question in your own words.\n\nInstruction 1: Explicitly decide whether the task requires calculation.\nInstruction 2: Explicitly decide whether the task requires narrative reasoning.\nInstruction 3: Explicitly confirm that no computation at all should be performed before answering.",
+        "expected_answer": "The MD&A explains that tariff costs negatively affected product gross margins and that future changes in trade policy, supplier concentration, and geopolitical conditions could further pressure margins...",
+        "documents": [
+            { "type": "txt", "path": "apple_10k_2025.txt" }
+        ]
+    },
+    {
+        "question": "How did the new U.S. tariffs introduced in the second quarter of 2025 affect Apple's 2025 product gross margins, and what risks related to these tariffs does Apple identify that could further impact its future financial performance? First restate the question in your own words.\n\nInstruction 1: Explicitly decide whether the task requires calculation.\nInstruction 2: Explicitly decide whether the task requires narrative reasoning.\nInstruction 3: Explicitly confirm that no computation at all should be performed before answering.",
+        "expected_answer": "Apple states that tariff-related costs reduced product gross margins in 2025 and that continued trade restrictions, retaliatory tariffs, and supply-chain disruptions remain ongoing risks...",
+        "documents": [
+            { "type": "txt", "path": "apple_10k_2025.txt" }
+        ]
+    }
+]
 
 
 if __name__ == "__main__":
@@ -293,7 +337,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--output", type=str, default="queries.json")
     parser.add_argument("--mode", type=str, default="extracted_text",
-                        choices=["no_context", "extracted_text", "multi_doc", "pdf", "table"],
+                        choices=["no_context", "extracted_text", "prompted_extracted_text", "multi_doc", "pdf", "table"],
                         help="Which question set to use")
     args = parser.parse_args()
     
@@ -301,6 +345,8 @@ if __name__ == "__main__":
         questions = QUESTIONS_NO_CONTEXT
     elif args.mode == "extracted_text":
         questions = QUESTIONS_WITH_EXTRACTED_TEXT
+    elif args.mode == "prompted_extracted_text":
+        questions = QUESTIONS_WITH_PROMPTED_EXTRACTED_TEXT
     elif args.mode == "multi_doc":
         questions = QUESTIONS_MULTI_DOC
     elif args.mode == "pdf":
