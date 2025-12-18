@@ -12,7 +12,8 @@ import numpy as np
 import json
 import os
 from datetime import datetime
-
+import re
+from collections import defaultdict
 
 # ============== PDF Text Extraction ==============
 
@@ -167,6 +168,60 @@ def first_true_indices(tensor):
                           tensor.shape[1] * torch.ones_like(tensor))
     return indices.min(dim=1).values
 
+def bucket_token(tok: str) -> str:
+    t = tok.lower().replace("▁", "").replace("Ġ", "")
+
+    # ---- SENTINELS / CONTROL ----
+    if "###end" in t or "end python" in t:
+        return "sentinel"
+
+    # ---- EXECUTION TRACE ----
+    if re.search(r"(add|subtract|multiply|divide)\(#?\d", t):
+        return "execution_trace"
+
+    # ---- CALCULATION TEMPLATE ----
+    if re.match(r"step\d+|ans|average", t):
+        return "calculation_template"
+    if t in ["+", "-", "*", "/", "="]:
+        return "calculation_template"
+
+    # ---- PROGRAMMING SYNTAX ----
+    if any(x in t for x in ["const_", "#", "(", ")", "=", ":"]):
+        return "code_syntax"
+
+    # ---- NUMBERS ----
+    if re.search(r"\d", t):
+        return "number"
+
+    # ---- INSTRUCTION SCAFFOLD ----
+    if t in ["answer", "step", "steps", "strictly", "follow"]:
+        return "instruction_scaffold"
+
+    # ---- DISCOURSE / PROSE ----
+    if t in ["because", "however", "therefore", "collectively"]:
+        return "discourse"
+
+    if t.strip() == "":
+        return "whitespace"
+
+    return "lexical"
+
+def aggregate_kl_by_bucket(token_kl_records):
+    agg = defaultdict(lambda: {
+        "total_kl": 0.0,
+        "count": 0,
+        "mean_kl": 0.0,
+    })
+
+    for rec in token_kl_records:
+        b = rec["bucket"]
+        agg[b]["total_kl"] += rec["kl"]
+        agg[b]["count"] += 1
+
+    for b in agg:
+        agg[b]["mean_kl"] = agg[b]["total_kl"] / max(1, agg[b]["count"])
+
+    return agg
 
 # ============== Main KL computation ==============
 
@@ -202,6 +257,10 @@ def compute_kl_between_models(
     all_queries = []
     all_policy_responses = []
     all_ref_responses = []
+    all_exact_per_token = []
+    all_mc_per_token = []
+
+    token_kl_records = []
     
     INVALID_LOGPROB = 1.0
     
@@ -289,12 +348,50 @@ def compute_kl_between_models(
             kl_mc = compute_kl(policy_logprob, ref_logprob)
             kl_mc = torch.masked_fill(kl_mc, padding_mask, 0.0).sum(1)
             
-            kl_exact = compute_kl(policy_logprob, ref_logprob, logits_p=policy_logits, logits_q=ref_logits)
-            kl_exact = torch.masked_fill(kl_exact, padding_mask, 0.0).sum(1)
+            kl_exact_tokenwise = compute_kl(
+                policy_logprob, ref_logprob,
+                logits_p=policy_logits,
+                logits_q=ref_logits
+            )
+
+            kl_exact_tokenwise = torch.masked_fill(
+                kl_exact_tokenwise, padding_mask, 0.0
+            )
+
+            kl_exact = kl_exact_tokenwise.sum(1)
+
+
+            # ---- Token-level KL aggregation ----
+
+            for b in range(policy_response.shape[0]):
+                token_ids = policy_response[b]
+                token_kls = kl_exact[b]
+                pad_mask  = padding_mask[b]
+
+                tokens = tokenizer.convert_ids_to_tokens(token_ids.tolist())
+
+                for tok, kl_val, is_pad in zip(tokens, token_kls.tolist(), pad_mask.tolist()):
+                    if is_pad:
+                        continue
+
+                    bucket = bucket_token(tok)
+
+                    token_kl_records.append({
+                        "token": tok,
+                        "bucket": bucket,
+                        "kl": float(kl_val),
+                    })
+
+            valid_tokens = (~padding_mask).sum(dim=1).clamp_min(1)
+
+            kl_mc_per_token = kl_mc / valid_tokens
+            kl_exact_per_token = kl_exact / valid_tokens
             
             all_kl_mc.extend(kl_mc.cpu().numpy())
             all_kl_exact.extend(kl_exact.cpu().numpy())
             all_queries.extend(tokenizer.batch_decode(query, skip_special_tokens=True))
+            all_mc_per_token.extend(kl_mc_per_token.cpu().numpy())
+            all_exact_per_token.extend(kl_exact_per_token.cpu().numpy())
             
             if i % (batch_size * 4) == 0:
                 torch.cuda.empty_cache()
@@ -304,6 +401,10 @@ def compute_kl_between_models(
         "kl_mc_std": np.std(all_kl_mc),
         "kl_exact_mean": np.mean(all_kl_exact),
         "kl_exact_std": np.std(all_kl_exact),
+        "kl_mc_per_token_mean": np.mean(all_mc_per_token),
+        "kl_mc_per_token_std": np.std(all_mc_per_token),
+        "kl_exact_per_token_mean": np.mean(all_exact_per_token),
+        "kl_exact_per_token_std": np.std(all_exact_per_token),
         "kl_mc_values": all_kl_mc,
         "kl_exact_values": all_kl_exact,
         "queries": all_queries,
@@ -311,6 +412,8 @@ def compute_kl_between_models(
         "ref_responses": all_ref_responses,
         # Keep backward compatibility
         "responses": all_policy_responses,
+        "bucket_kl_summary": aggregate_kl_by_bucket(token_kl_records)
+
     }
 
 
@@ -325,6 +428,11 @@ def save_results(results: dict, config: dict, output_dir: str = "results"):
         "kl_mc_std": float(results["kl_mc_std"]),
         "kl_exact_mean": float(results["kl_exact_mean"]),
         "kl_exact_std": float(results["kl_exact_std"]),
+        "kl_mc_per_token_mean": float(results["kl_mc_per_token_mean"]),
+        "kl_mc_per_token_std": float(results["kl_mc_per_token_std"]),
+        "kl_exact_per_token_mean": float(results["kl_exact_per_token_mean"]),
+        "kl_exact_per_token_std": float(results["kl_exact_per_token_std"]),
+        "bucket_kl_summary": results["bucket_kl_summary"],
         "num_samples": len(results["kl_mc_values"]),
         "timestamp": timestamp,
     }
