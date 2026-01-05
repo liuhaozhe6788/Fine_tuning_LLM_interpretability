@@ -506,7 +506,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--output", type=str, default="queries.json")
     parser.add_argument("--mode", type=str, default="extracted_text",
-                        choices=["no_context", "extracted_text", "prompted_extracted_text", "multi_doc", "pdf", "table"],
+                        choices=["no_context", "extracted_text", "prompted_extracted_text_1", "prompted_extracted_text_2", "prompted_extracted_text_3", "prompted_extracted_text_4", "prompted_extracted_text_5", "multi_doc", "pdf", "table"],
                         help="Which question set to use")
     args = parser.parse_args()
     
