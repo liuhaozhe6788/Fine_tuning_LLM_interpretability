@@ -1,0 +1,49 @@
+{
+  "kl_mc_mean": 272.0,
+  "kl_mc_std": 59.40625,
+  "kl_exact_mean": 278.0,
+  "kl_exact_std": 44.9375,
+  "kl_mc_per_token_mean": 1.162109375,
+  "kl_mc_per_token_std": 0.1435546875,
+  "kl_exact_per_token_mean": 1.2060546875,
+  "kl_exact_per_token_std": 0.1702880859375,
+  "bucket_kl_summary": {
+    "code_syntax": {
+      "total_kl": 330.09739208221436,
+      "count": 223,
+      "mean_kl": 1.4802573635973737
+    },
+    "lexical": {
+      "total_kl": 845.0346802473068,
+      "count": 861,
+      "mean_kl": 0.9814572360595898
+    },
+    "number": {
+      "total_kl": 256.7222719192505,
+      "count": 228,
+      "mean_kl": 1.125974876838818
+    },
+    "instruction_scaffold": {
+      "total_kl": 61.37909412384033,
+      "count": 15,
+      "mean_kl": 4.091939608256022
+    },
+    "calculation_template": {
+      "total_kl": 94.38503777980804,
+      "count": 34,
+      "mean_kl": 2.776030522935531
+    },
+    "whitespace": {
+      "total_kl": 58.95856070518494,
+      "count": 36,
+      "mean_kl": 1.6377377973662481
+    },
+    "value_investing": {
+      "total_kl": 21.145976305007935,
+      "count": 16,
+      "mean_kl": 1.321623519062996
+    }
+  },
+  "num_samples": 6,
+  "timestamp": "20260105_145557"
+}

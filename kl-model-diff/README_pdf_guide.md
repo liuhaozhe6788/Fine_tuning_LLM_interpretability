@@ -33,7 +33,7 @@ python create_queries_json.py --output queries.json --mode extracted_text
 
 ```bash
 python compute_kl_divergence.py \
-    --queries_json queries.json \
+    --queries_json value_investing_pdf.json \
     --policy_device cuda:0 \
     --ref_device cuda:1 \
     --batch_size 1 \
