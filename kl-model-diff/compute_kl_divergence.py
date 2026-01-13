@@ -1,6 +1,6 @@
 """
 Compute KL divergence between a fine-tuned model and the base model.
-Supports multi-GPU setups, custom queries from JSON, and PDF context injection.
+Supports multi-GPU setups, custom queries from JSON
 """
 
 import torch
@@ -15,51 +15,10 @@ from datetime import datetime
 import re
 from collections import defaultdict
 
-# ============== PDF Text Extraction ==============
-
-def extract_text_from_pdf(pdf_path: str, max_pages: Optional[int] = None) -> str:
-    """Extract text from a PDF file."""
-    try:
-        import fitz  # PyMuPDF
-        doc = fitz.open(pdf_path)
-        text_parts = []
-        pages_to_read = min(len(doc), max_pages) if max_pages else len(doc)
-        for page_num in range(pages_to_read):
-            page = doc[page_num]
-            text_parts.append(page.get_text())
-        doc.close()
-        return "\n".join(text_parts)
-    except ImportError:
-        try:
-            import pdfplumber
-            text_parts = []
-            with pdfplumber.open(pdf_path) as pdf:
-                pages_to_read = min(len(pdf.pages), max_pages) if max_pages else len(pdf.pages)
-                for i in range(pages_to_read):
-                    page_text = pdf.pages[i].extract_text()
-                    if page_text:
-                        text_parts.append(page_text)
-            return "\n".join(text_parts)
-        except ImportError:
-            raise ImportError(
-                "No PDF library found. Install with:\n"
-                "  pip install pymupdf --break-system-packages"
-            )
-
-
 def load_document_context(doc_config: Dict[str, Any], base_dir: str = ".") -> str:
     """Load document context from various sources."""
-    doc_type = doc_config.get("type", "text")
-    
-    if doc_type == "text":
-        return doc_config.get("text", "")
-    elif doc_type == "pdf":
-        pdf_path = doc_config.get("path", "")
-        if not os.path.isabs(pdf_path):
-            pdf_path = os.path.join(base_dir, pdf_path)
-        max_pages = doc_config.get("max_pages", None)
-        return extract_text_from_pdf(pdf_path, max_pages)
-    elif doc_type == "txt":
+    doc_type = doc_config.get("type", "text")    
+    if doc_type == "txt":
         txt_path = doc_config.get("path", "")
         if not os.path.isabs(txt_path):
             txt_path = os.path.join(base_dir, txt_path)
@@ -67,7 +26,6 @@ def load_document_context(doc_config: Dict[str, Any], base_dir: str = ".") -> st
             return f.read()
     else:
         raise ValueError(f"Unknown document type: {doc_type}")
-
 
 # ============== Query Loading ==============
 
@@ -82,8 +40,6 @@ def load_queries_from_json(json_path: str) -> List[Dict[str, Any]]:
                 "question": "What is...",
                 "expected_answer": "The answer is...",  // optional
                 "documents": [  // optional
-                    {"type": "pdf", "path": "path/to/doc.pdf", "max_pages": 10},
-                    {"type": "text", "text": "Some context..."},
                     {"type": "txt", "path": "path/to/doc.txt"}
                 ]
             }
@@ -99,7 +55,6 @@ def load_queries_from_json(json_path: str) -> List[Dict[str, Any]]:
         return data["queries"]
     else:
         raise ValueError("JSON must contain a list or a dict with 'queries' key")
-
 
 def format_prompt_with_context(
     question: str,
@@ -138,21 +93,6 @@ def format_prompt_with_context(
 
 
 # ============== Utility functions ==============
-
-def selective_log_softmax(logits, index):
-    if logits.dtype in [torch.float32, torch.float64]:
-        selected_logits = torch.gather(logits, dim=-1, index=index.unsqueeze(-1)).squeeze(-1)
-        logsumexp_values = torch.stack([torch.logsumexp(lg, dim=-1) for lg in logits])
-        per_token_logps = selected_logits - logsumexp_values
-    else:
-        per_token_logps = []
-        for row_logits, row_labels in zip(logits, index):
-            row_logps = F.log_softmax(row_logits, dim=-1)
-            row_per_token_logps = row_logps.gather(dim=-1, index=row_labels.unsqueeze(-1)).squeeze(-1)
-            per_token_logps.append(row_per_token_logps)
-        per_token_logps = torch.stack(per_token_logps)
-    return per_token_logps
-
 
 def compute_kl(new_logprobs, ref_logprobs, logits_p=None, logits_q=None):
     if logits_p is not None:
@@ -260,7 +200,6 @@ def post_process_answer(ans: str, end_marker: str = "###End Python") -> str:
         return ans.split(end_marker)[0] + "\n" + end_marker
     return ans
 
-
 def compute_kl_between_models(
     policy_model,
     ref_model,
@@ -357,7 +296,9 @@ def compute_kl_between_models(
             policy_output = policy_model(query_response, attention_mask=policy_attention_mask)
             policy_logits = policy_output.logits[:, context_length - 1: -1]
             policy_logits = policy_logits / (temperature + 1e-7)
-            policy_logprob = selective_log_softmax(policy_logits, policy_response)
+            full_policy_log_probs = F.log_softmax(policy_logits, dim=-1)
+            policy_logprob = full_policy_log_probs.gather(dim=-1, index=policy_response.unsqueeze(-1)).squeeze(-1)
+            
             
             query_response_ref = query_response.to(ref_device)
             ref_attention_mask = (query_response_ref != tokenizer.pad_token_id).long()
@@ -366,7 +307,8 @@ def compute_kl_between_models(
             ref_logits = ref_logits / (temperature + 1e-7)
             
             ref_logits = ref_logits.to(policy_device)
-            ref_logprob = selective_log_softmax(ref_logits, policy_response)
+            full_ref_log_probs = F.log_softmax(ref_logits, dim=-1)
+            ref_logprob = full_ref_log_probs.gather(dim=-1, index=policy_response.unsqueeze(-1)).squeeze(-1)
             
             sequence_lengths = first_true_indices(policy_response == tokenizer.pad_token_id) - 1
             response_idxs = torch.arange(policy_response.shape[1], device=policy_device).repeat(policy_response.shape[0], 1)
@@ -389,7 +331,6 @@ def compute_kl_between_models(
             )
 
             kl_exact = kl_exact_tokenwise.sum(1)
-
 
             # ---- Token-level KL aggregation ----
 
@@ -447,7 +388,6 @@ def compute_kl_between_models(
 
     }
 
-
 def save_results(results: dict, config: dict, output_dir: str = "results"):
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     adapter_short = config.get("adapter_name", "unknown").split("/")[-1][:30]
@@ -471,7 +411,7 @@ def save_results(results: dict, config: dict, output_dir: str = "results"):
     with open(os.path.join(run_dir, "summary.json"), "w") as f:
         json.dump(summary, f, indent=2)
     
-    # Save config without prompts (they can be huge with PDF content)
+    # Save config without prompts
     config_to_save = {k: v for k, v in config.items() if k != "prompts_used"}
     with open(os.path.join(run_dir, "config.json"), "w") as f:
         json.dump(config_to_save, f, indent=2)

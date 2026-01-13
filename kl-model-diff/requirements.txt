@@ -1,0 +1,16 @@
+scikit-learn==1.7.2
+openai==2.8.1
+torch==2.9.0
+numpy==2.1.2
+transformers==4.57.1
+datasets==4.4.1
+peft==0.18.0
+accelerate==1.12.0
+bitsandbytes==0.42.0
+trl==0.12.1
+vllm==0.11.2
+plotly
+nnsight
+wandb
+matplotlib
+seaborn

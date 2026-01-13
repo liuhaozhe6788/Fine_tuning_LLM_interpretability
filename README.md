@@ -122,6 +122,9 @@ We visualise the histogram of relative decoder norm strength and the cosine simi
 
 ### 5: Run KL divergence
 Run the following from within the kl-model-diff folder. 
+
+Please note, because of the size of the models this code is meant to run with two GPUs. 
+
 First, run setup.sh, some additional packages have to be removed. 
 Then, run the following, changes the .json file as desired. 
 
