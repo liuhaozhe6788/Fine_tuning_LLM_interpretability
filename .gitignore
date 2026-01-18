@@ -7,3 +7,6 @@ __pycache__/
 .env
 *.pyc
 crosscoder-model-diff/checkpoints/
+# ADL results (generated on cluster, should not be in git)
+adl-model-diff/adl_results_*/
+adl-model-diff/*_results_*/

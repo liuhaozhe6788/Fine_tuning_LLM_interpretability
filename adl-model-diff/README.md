@@ -26,7 +26,7 @@ ADL analyzes differences between base and fine-tuned models by:
 
 - **Layer**: 16 (middle layer, 0.5 depth for 32-layer model) - matches crosscoder
 - **Positions**: First 6 tokens [0, 1, 2, 3, 4, 5]
-- **Sequence length**: 128 tokens (analyzing first 6 positions)
+- **Sequence length**: 64 tokens (reduced for memory efficiency, analyzing first 6 positions)
 - **Random seed**: 49 (matches crosscoder; KL experiments may use different seed)
 - **Dataset**: FinQA train split (`finqa_train_generated_filtered.csv`)
 
@@ -118,14 +118,24 @@ results/
 
 ## Files
 
+### Core Code
 - `adl_analysis.py` - Main analysis script
+- `config.py` - Configuration management
+- `utils.py` - Shared utilities (data loading, model loading, activation extraction)
+- `utils_hf_activations.py` - HuggingFace activation loading utilities
 - `logit_lens.py` - Logit lens implementation
 - `patchscope.py` - Patchscope implementation
 - `token_relevance.py` - Token relevance analysis
 - `causal_effect.py` - Causal effect measurement
-- `utils.py` - Shared utilities
-- `config.py` - Configuration management
-- `run_adl.sh` - SLURM job script
+- `steering.py` - Steering experiments
+
+### Job Scripts (for reproducibility)
+- `run_minimal_adl_job.sh` - Minimal: logit_lens + token_relevance
+- `run_fast_adl_job.sh` - Fast: logit_lens + patchscope + token_relevance
+- `run_adl_with_steering_job.sh` - Full without causal: logit_lens + patchscope + token_relevance + steering
+- `run_full_adl_job.sh` - Full: all components including causal_effect
+- `run_steering_job.sh` - Steering only (requires logit_lens results first)
+- `setup_scratch.sh` - Scratch space setup script
 
 ## Consistency with Other Methods
 
