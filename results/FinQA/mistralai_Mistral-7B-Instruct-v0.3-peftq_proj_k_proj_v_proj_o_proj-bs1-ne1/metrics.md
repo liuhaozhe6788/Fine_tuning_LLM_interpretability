@@ -6,7 +6,7 @@ This document records test accuracy in the FinQA benchmark.
 
 ## Accuracy
 
-|        | FinQA | GPT-3.5T | GPT4 |
+|        | Mistral-7b | GPT-3.5T | GPT4 |
 |--------|-------|-------|-------|
 | zero-shot | 49.91 | 66.52 | 77.51
 | few-shot | 46.83 | 67.39 | 78.46

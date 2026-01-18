@@ -1,0 +1,134 @@
+======================================================================
+KL DIVERGENCE EXPERIMENT REPORT
+======================================================================
+
+CONFIGURATION:
+----------------------------------------
+  Base Model:     mistralai/Mistral-7B-Instruct-v0.3
+  Adapter:        liuhaozhe6788/mistralai_Mistral-7B-Instruct-v0.3-peftq_proj_k_proj_v_proj_o_proj-bs1-ne1
+  Query Source:   prompted_pdf_3.json
+  Num Prompts:    6
+  Max New Tokens: 256
+  Temperature:    1.0
+
+RESULTS:
+----------------------------------------
+  MC Estimator KL:     260.7500 ± 51.3125
+  Exact (Stepwise) KL: 263.2500 ± 45.2500
+
+PER-SAMPLE KL VALUES:
+----------------------------------------
+
+--- Sample 1 ---
+Question: What is the condensed, overarching explanation of how Apple's global supply-chain dependencies, exposure to geopolitical and macroeconomic pressures, and vulnerability to cybersecurity and data-security threats collectively form interconnected risks that can materially affect its operations, financi...
+
+POLICY (Fine-tuned) Response:
+Increased tariffs and other trade barriers, currency fluctuations, and cybersecurity vulnerabilities all expose Apple to risks that could have a significant impact on its operations and financial condition. To mitigate these risks, Apple focuses on maintaining a resilient global supply chain, investing in R&D, and keeping a strong focus on software and hardware security.
+
+Tariffs and other trade barriers: According to the World Trade Organization, tariffs and other trade barriers can lead to hig...
+
+REFERENCE (Base) Response:
+Apple's global supply-chain dependencies, exposure to geopolitical and macroeconomic pressures, and vulnerability to cybersecurity and data-security threats collectively form interconnected risks that can materially affect its operations, financial condition, and reputation in several ways.
+
+Firstly, Apple's global supply chain is intrinsically linked to its operations as it relies on numerous manufacturers and suppliers scattered worldwide, particularly in countries such as China, India, Japan,...
+
+KL (MC): 213.3750, KL (Exact): 216.0000
+
+--- Sample 2 ---
+Question: How did the combination of Apple's 2025 product-release cycle, regional shifts in segment performance, and evolving macroeconomic and tariff conditions collectively shape the company's overall changes in net sales, gross margins, and operating expenses during the fiscal year?
+Answer only with narrat...
+
+POLICY (Fine-tuned) Response:
+# Step #0: divide(112, 8)
+step0 = 112 / 8
+
+# Step #1: divide(64, 4)
+step1 = 64 / 4
+
+# Step #2: multiply(#0, #1)
+ans = step0 * step1
+###End Python
+
+REFERENCE (Base) Response:
+During fiscal year 2025, Apple released several new products and software, including the MacBook Pro, Mac mini, iMac, iPad mini, iPhone 16e, iPad Air, iPad, MacBook Air, Mac Studio, iOS 26, macOS Tahoe 26, iPadOS 26, watchOS 26, visionOS 26, and tvOS 26, as well as new models of the iPhone, Apple Watch, and AirPods Pro. This product-release cycle contributed positively to Apple's overall changes in net sales during the fiscal year, with increased sales in most regions.
+
+In terms of regional perf...
+
+KL (MC): 276.0000, KL (Exact): 284.0000
+
+--- Sample 3 ---
+Question: How do Apple's 2025 financial disclosures characterize the combined impact of new U.S.-announced tariffs, global macroeconomic pressures, and supply-chain dependencies on its gross margins and overall operational risks?
+Answer only with narrative text, avoiding any code or calculations.
+
+POLICY (Fine-tuned) Response:
+In 2021, President Joe Biden signed the American Rescue Plan Act, and the U.S. government initiated a variety of policies aimed at accelerating the economic recovery following the 2020 COVID-19 outbreak. The U.S. tariffs announced in the second quarter of 2021 affected imports from China, India, Japan, South Korea, Taiwan, and the EU among other countries. Global macroeconomic pressures may include inflation, interest rates, and currency fluctuations, all of which can have a direct or indirect i...
+
+REFERENCE (Base) Response:
+Apple's 2025 financial disclosures indicate that both new U.S.-announced tariffs and global macroeconomic pressures, including inflation, interest rates, and currency fluctuations, have the potential to materially impact the company's results of operations and financial condition. Specifically, the recently imposed tariffs on imports from several countries like China, India, Japan, South Korea, Taiwan, Vietnam, and the EU, as well as potential retaliatory measures from other nations, pose risks ...
+
+KL (MC): 204.3750, KL (Exact): 203.5000
+
+--- Sample 4 ---
+Question: How would you summarize the company's recent financial performance, operating trends, and major risk exposures based on its latest annual disclosures?
+Answer only with narrative text, avoiding any code or calculations.
+
+POLICY (Fine-tuned) Response:
+# Using the provided hint steps
+# Step #0: add(195, 180)
+step0 = 195 + 180
+# Step #1: add(#0, 169)
+step1 = step0 + 169
+# Step #2: divide(35, 370)
+step2 = 35 / 370
+# Step #3: divide(#1, const_3)
+step3 = step1 / 3
+# Step #4: multiply(62, const_1000000)
+step4 = 62 * 1_000_000
+# Step #5: divide(#2, #4)
+ans = step2 / step4
+###End Python
+
+REFERENCE (Base) Response:
+The company's recent financial performance, as detailed in its latest annual disclosures, shows a 6% year-over-year increase in total net sales for 2025 compared to 2024, reaching $416.16 billion. This growth is attributed to higher sales of iPhone, Services, Mac, iPad, and various products in various regions such as the Americas, Europe, Japan, and the Rest of Asia Pacific.
+
+There is a noticeable increase in net sales for Services, which is a significant portion of the company's total net sales...
+
+KL (MC): 359.7500, KL (Exact): 339.2500
+
+--- Sample 5 ---
+Question: Based on Apple's 2025 Form 10-K, how did newly introduced U.S. tariffs beginning in Q2 2025 affect Apple's product gross margins, and what related supply-chain and international trade risks does the company identify that could further impact margins in the future?
+Answer only with narrative text, av...
+
+POLICY (Fine-tuned) Response:
+Increased U.S. tariffs could potentially cause higher prices and lower competitiveness for U.S. consumers, potentially impacting consumer confidence and demand for Apple products. The specific impact would depend on factors such as the level of the tariff and the level of retaliation from targeted countries.
+Related supply chain and international trade risks include:
+1) increased tariffs on imports from US allies
+2) further retaliation from partners following U.S. tariffs
+3) U.S. trade partners ...
+
+REFERENCE (Base) Response:
+Based on the information provided in Apple's 2025 Form 10-K, the newly introduced U.S. tariffs beginning in Q2 2025 had a direct impact on Apple's product gross margins. The tariffs led to increased costs for Apple, which in turn resulted in a decrease in products gross margin percentage during 2025 compared to 2024. This decrease was partially offset by favorable costs and a different mix of products.
+
+In terms of related supply-chain and international trade risks, Apple identifies several fact...
+
+KL (MC): 268.0000, KL (Exact): 257.5000
+
+--- Sample 6 ---
+Question: How did the new U.S. tariffs introduced in the second quarter of 2025 affect Apple's 2025 product gross margins, and what risks related to these tariffs does Apple identify that could further impact its future financial performance?
+Answer only with narrative text, avoiding any code or calculations.
+
+POLICY (Fine-tuned) Response:
+As a result of the new U.S. tariffs, Apple has identified that: i) the costs of imported components from China, India, Japan, South Korea, Taiwan, Vietnam, and the EU may increase, and ii) there may be a shift in production, including outsourcing and supply chain adjustments. The cost increase from tariffs depends on the specific tariffs imposed and the products they affect.
+Answer Hint(s): cost increase due to tariffs, shift in production
+
+def add(a, b):
+    return a + b
+
+ans = add(cost increas...
+
+REFERENCE (Base) Response:
+The new U.S. tariffs introduced in the second quarter of 2025 have had an impact on Apple's product gross margins. In Apple's Products Gross Margin section, it is mentioned that the tariff costs partially offset the favorable costs, leading to a decrease in products gross margin percentage during 2025 compared to 2024. However, the favorable costs and a different mix of products were the primary reasons for the increase in products gross margin during 2025 compared to 2024.
+
+Regarding the risks ...
+
+KL (MC): 243.5000, KL (Exact): 279.0000

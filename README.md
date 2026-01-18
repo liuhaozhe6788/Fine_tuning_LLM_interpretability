@@ -120,3 +120,21 @@ python train.py
 #### 4. Crosscoder analysis
 We visualise the histogram of relative decoder norm strength and the cosine similarity of decoder vector between models, as well as generate the latent dashboard to display the hot tokens for some interesting latents. The results are stored under `crosscoder-model-diff/results/Mistral-7B-Instruct-v0.3_1k_samples_batchtopk` after running the notebook `analysis_and_dashboard.ipynb`.
 
+### 5: Run KL divergence
+Run the following from within the kl-model-diff folder. 
+
+Please note, because of the size of the models this code is meant to run with two GPUs. 
+
+First, run setup.sh, some additional packages have to be removed. 
+Then, run the following, changes the .json file as desired. 
+
+```bash
+python compute_kl_divergence.py \
+    --queries_json value_investing_pdf.json \
+    --policy_device cuda:0 \
+    --ref_device cuda:1 \
+    --batch_size 1 \
+    --max_new_tokens 256 \
+    --max_context_chars 10000 \
+    --output_dir results
+```

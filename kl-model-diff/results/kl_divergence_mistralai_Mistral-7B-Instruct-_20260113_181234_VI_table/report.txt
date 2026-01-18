@@ -1,0 +1,81 @@
+======================================================================
+KL DIVERGENCE EXPERIMENT REPORT
+======================================================================
+
+CONFIGURATION:
+----------------------------------------
+  Base Model:     mistralai/Mistral-7B-Instruct-v0.3
+  Adapter:        liuhaozhe6788/mistralai_Mistral-7B-Instruct-v0.3-peftq_proj_k_proj_v_proj_o_proj-bs1-ne1
+  Query Source:   value_investing_table.json
+  Num Prompts:    3
+  Max New Tokens: 256
+  Temperature:    1.0
+
+RESULTS:
+----------------------------------------
+  MC Estimator KL:     302.7500 ± 82.5625
+  Exact (Stepwise) KL: 291.0000 ± 74.7500
+
+PER-SAMPLE KL VALUES:
+----------------------------------------
+
+--- Sample 1 ---
+Question: 
+        
+        ### Passage: the following table presents for Apple Inc. (AAPL) key financial metrics over the past decade, highlighting annual averages, maximums, and minimums for various performance indicators from 2016 to 2025.
+            Years Ended December 31 (2016–2025) | Annual Average | ...
+
+POLICY (Fine-tuned) Response:
+# Calculate five-year price-to-earnings (PE) ratio per the hint
+const_5 = 5
+step0 = 4.50 * const_5
+step1 = 36.3 ** const_5
+ans = step0 - step1
+###End Python
+
+REFERENCE (Base) Response:
+To find the five-year price-to-earnings (PE) ratio, we don't have the specific data for each year between 2016 and 2025. However, the P/E ratio given in the table is 36.3. Generally, a five-year PE ratio can be calculated by taking the ending stock price of any year and dividing it by the corresponding earnings per share (EPS) of that year, and then finding the average of the ratio over the specified five-year period.
+
+Since you've asked if the five-year PE ratio is less than 22.5, as the provid...
+
+KL (MC): 419.0000, KL (Exact): 396.5000
+
+--- Sample 2 ---
+Question: 
+        
+        ### Passage: the following table presents for Apple Inc. (AAPL) key financial metrics over the past decade, highlighting annual averages, maximums, and minimums for various performance indicators from 2016 to 2025.
+            Years Ended December 31 (2016–2025) | Annual Average | ...
+
+POLICY (Fine-tuned) Response:
+# Calculate five-year return on invested capital (ROIC) per the prompt
+const_5 = 5
+step0 = 39.6 + const_5
+ans = 40.4 / step0
+###End Python
+
+REFERENCE (Base) Response:
+Unfortunately, the provided table does not contain a specific metric for the Five-Year Return on Invested Capital (ROIC) for Apple Inc. between 2016 and 2025.
+
+To calculate ROIC, you typically use a longer period of data (usually 10 years) to get a more accurate representation of the company's performance. However, if specific five-year data is available, it would be computed by taking the average of the ROIC for each year within the 5-year period. I couldn't find such data in the table provided...
+
+KL (MC): 253.3750, KL (Exact): 242.8750
+
+--- Sample 3 ---
+Question: 
+        
+        ### Passage: the following table presents for Apple Inc. (AAPL) key financial metrics over the past decade, highlighting annual averages, maximums, and minimums for various performance indicators from 2016 to 2025.
+            Years Ended December 31 (2016–2025) | Annual Average | ...
+
+POLICY (Fine-tuned) Response:
+# Calculate: greater(6.5, 33.3)
+ans = 6.5 > 33.3
+###End Python
+
+REFERENCE (Base) Response:
+From the provided table, the revenue growth for the most recent year (2025) is not listed. However, we can compare the growth rate from the year before (2024) with the growth rate from 5 years ago (2020).
+
+To find the growth rate for a specific year, we subtract the previous year's revenue from the current year's revenue, divide that difference by the previous year's revenue, and multiply by 100.
+
+For example, in 2020, the revenue was $279,121 million, and in 2019, it was $260,584 million. So th...
+
+KL (MC): 235.6250, KL (Exact): 233.3750
